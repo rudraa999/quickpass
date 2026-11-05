@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QuickPass - My Bookings & QR Passes</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Plus Jakarta Sans', sans-serif; }
+        @media print {
+            nav, footer, .no-print { display: none !important; }
+            body { background: white !important; }
+        }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800 min-h-screen flex flex-col antialiased selection:bg-indigo-100 selection:text-indigo-700">
+
+    <!-- Top Navigation Bar -->
+    <nav class="bg-white border-b border-slate-200 sticky top-0 z-50 shadow-sm no-print">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-16">
+                <!-- Brand Logo & Main Nav Links -->
+                <div class="flex items-center space-x-8">
+                    <a th:href="@{/dashboard}" class="flex items-center space-x-3">
+                        <div class="w-10 h-10 rounded-xl bg-indigo-600 flex items-center justify-center text-white shadow-md shadow-indigo-200">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z"/>
+                            </svg>
+                        </div>
+                        <span class="text-xl font-extrabold text-slate-900 tracking-tight">QuickPass</span>
+                    </a>
+
+                    <!-- Nav Items -->
+                    <div class="hidden md:flex items-center space-x-1">
+                        <a th:href="@{/dashboard}"
+                           class="px-3.5 py-2 rounded-xl text-sm font-semibold text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition">
+                            Events
+                        </a>
+                        <a th:href="@{/my-bookings}"
+                           class="px-3.5 py-2 rounded-xl text-sm font-bold bg-indigo-50 text-indigo-700">
+                            My Bookings
+                        </a>
+                        <a th:href="@{/organizer}"
+                           class="px-3.5 py-2 rounded-xl text-sm font-semibold text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition">
+                            Organizer
+                        </a>
+                        <!-- Admin Approval: Strictly visible ONLY to Main Admin -->
+                        <a th:if="${isAdmin}" th:href="@{/admin/events}"
+                           class="px-3.5 py-2 rounded-xl text-sm font-bold bg-purple-50 text-purple-700 border border-purple-200 hover:bg-purple-100 transition flex items-center space-x-1.5 shadow-sm">
+                            <span class="w-2 h-2 rounded-full bg-purple-600"></span>
+                            <span>Admin Approval</span>
+                        </a>
+                    </div>
+                </div>
+
+                <!-- Right Side: Account & Logout -->
+                <div class="flex items-center space-x-3">
+                    <a th:href="@{/account}"
+                       class="flex items-center space-x-2 px-3 py-1.5 rounded-xl hover:bg-slate-100 transition border border-transparent hover:border-slate-200">
+                        <div class="w-8 h-8 rounded-lg bg-indigo-100 text-indigo-700 font-bold flex items-center justify-center text-xs">
+                            <span th:text="${fullName != null ? fullName.substring(0, 1) : 'U'}">U</span>
+                        </div>
+                        <div class="hidden sm:flex flex-col text-left">
+                            <span class="text-xs font-bold text-slate-800" th:text="${fullName}">User Name</span>
+                            <span class="text-[10px] text-slate-400 font-medium">Account</span>
+                        </div>
+                    </a>
+
+                    <button type="button" onclick="logoutUser()"
+                       class="inline-flex items-center space-x-1 px-3 py-2 rounded-xl bg-slate-100 hover:bg-rose-50 text-slate-700 hover:text-rose-600 text-xs font-semibold transition border border-slate-200 cursor-pointer">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>
+                        </svg>
+                        <span>Logout</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Container -->
+    <main class="flex-grow max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-10 w-full">
+        <div class="flex items-center justify-between mb-8 no-print">
+            <div>
+                <h1 class="text-3xl font-extrabold text-slate-900 tracking-tight">My Purchased Passes</h1>
+                <p class="text-slate-500 text-sm mt-1">Present your QR code at the event gate for instant check-in</p>
+            </div>
+            <a th:href="@{/dashboard}" class="px-4 py-2 rounded-xl bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 text-sm font-semibold shadow-sm transition">
+                Browse More Events &rarr;
+            </a>
+        </div>
+
+        <!-- Empty State -->
+        <div th:if="${bookings == null || bookings.isEmpty()}" class="bg-white rounded-2xl border border-slate-200 p-12 text-center shadow-sm">
+            <div class="w-14 h-14 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center mx-auto mb-3">
+                <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z"/>
+                </svg>
+            </div>
+            <h3 class="text-lg font-bold text-slate-800">You haven't booked any passes yet</h3>
+            <p class="text-slate-500 text-sm mt-1 mb-4">Discover exciting events and secure your digital passes today.</p>
+            <a th:href="@{/dashboard}" class="px-4 py-2 bg-indigo-600 text-white font-bold rounded-xl text-sm hover:bg-indigo-700">
+                Explore Events
+            </a>
+        </div>
+
+        <!-- Bookings Cards -->
+        <div th:if="${bookings != null && !bookings.isEmpty()}" class="space-y-6">
+            <div th:each="booking : ${bookings}"
+                 class="bg-white rounded-2xl border border-slate-200/90 p-6 sm:p-8 shadow-sm flex flex-col md:flex-row items-center justify-between gap-8">
+                
+                <!-- Left Details -->
+                <div class="space-y-3 flex-1 w-full">
+                    <div class="flex items-center space-x-2.5">
+                        <!-- Pass Type Badge -->
+                        <span th:if="${booking.passType.name() == 'NORMAL'}" class="px-3 py-1 rounded-lg text-xs font-bold bg-slate-100 text-slate-800 border border-slate-200">
+                            Normal Pass
+                        </span>
+                        <span th:if="${booking.passType.name() == 'VIP'}" class="px-3 py-1 rounded-lg text-xs font-bold bg-indigo-50 text-indigo-700 border border-indigo-200">
+                            VIP Priority Pass
+                        </span>
+                        <span th:if="${booking.passType.name() == 'VVIP'}" class="px-3 py-1 rounded-lg text-xs font-bold bg-purple-50 text-purple-700 border border-purple-200">
+                            VVIP All Access Pass
+                        </span>
+
+                        <span class="text-xs font-mono font-bold text-slate-400">
+                            Code: <span class="text-slate-800 font-extrabold" th:text="${booking.ticketCode}">QP-XXXXXX</span>
+                        </span>
+                    </div>
+
+                    <!-- Event Title -->
+                    <h2 class="text-2xl font-extrabold text-slate-900 tracking-tight" th:text="${booking.event.title}">
+                        Event Name
+                    </h2>
+
+                    <!-- Venue & Date -->
+                    <div class="space-y-1 text-sm text-slate-600">
+                        <div class="flex items-center space-x-2">
+                            <svg class="w-4 h-4 text-rose-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>
+                            </svg>
+                            <span th:text="${booking.event.venue}">Venue Address</span>
+                        </div>
+                        <div class="flex items-center space-x-2">
+                            <svg class="w-4 h-4 text-indigo-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                            </svg>
+                            <span th:text="${#temporals.format(booking.event.eventDateTime, 'EEEE, dd MMMM yyyy &bull; hh:mm a')}">Event Date</span>
+                        </div>
+                    </div>
+
+                    <!-- Summary details -->
+                    <div class="pt-3 border-t border-slate-100 flex items-center space-x-6 text-xs text-slate-500">
+                        <div>
+                            Passes: <strong class="text-slate-800 text-sm" th:text="${booking.quantity}">1</strong>
+                        </div>
+                        <div>
+                            Total Paid: <strong class="text-indigo-600 text-sm">$<span th:text="${booking.totalAmount}">49.00</span></strong>
+                        </div>
+                        <div>
+                            Purchased: <span th:text="${#temporals.format(booking.bookedAt, 'dd MMM yyyy')}">Date</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Right QR Code & Actions -->
+                <div class="flex flex-col items-center justify-center p-4 rounded-2xl bg-slate-50 border border-slate-200 shrink-0">
+                    <img th:src="${booking.qrCodeBase64}" alt="Pass QR Code" class="w-44 h-44 rounded-xl shadow-sm bg-white p-2">
+                    <span class="mt-2 text-[11px] font-mono font-bold text-slate-500" th:text="${booking.ticketCode}">QP-123456</span>
+                    
+                    <button type="button" onclick="window.print()"
+                            class="no-print mt-3 px-3 py-1.5 rounded-lg bg-white border border-slate-200 text-slate-700 hover:bg-slate-100 text-xs font-semibold shadow-sm transition flex items-center space-x-1">
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/>
+                        </svg>
+                        <span>Print Pass</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="border-t border-slate-200 py-6 text-center text-slate-400 text-xs no-print">
+        QuickPass &bull; Built with Spring Boot, Thymeleaf, MySQL & JWT
+    </footer>
+
+    <script>
+        async function logoutUser() {
+            try {
+                localStorage.removeItem('quickpass_token');
+                await fetch('/api/auth/logout', { method: 'POST' });
+            } catch (err) {
+                console.error(err);
+            } finally {
+                window.location.href = '/login?logout';
+            }
+        }
+    </script>
+</body>
+</html>
+

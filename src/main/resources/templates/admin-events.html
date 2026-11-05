@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QuickPass - Admin Event Approval Panel</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Plus Jakarta Sans', sans-serif; }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800 min-h-screen flex flex-col antialiased selection:bg-indigo-100 selection:text-indigo-700">
+
+    <!-- Top Navigation Bar -->
+    <nav class="bg-white border-b border-slate-200 sticky top-0 z-50 shadow-sm">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-16">
+                <!-- Brand Logo & Main Nav Links -->
+                <div class="flex items-center space-x-8">
+                    <a th:href="@{/dashboard}" class="flex items-center space-x-3">
+                        <div class="w-10 h-10 rounded-xl bg-indigo-600 flex items-center justify-center text-white shadow-md shadow-indigo-200">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z"/>
+                            </svg>
+                        </div>
+                        <span class="text-xl font-extrabold text-slate-900 tracking-tight">QuickPass</span>
+                    </a>
+
+                    <!-- Nav Items -->
+                    <div class="hidden md:flex items-center space-x-1">
+                        <a th:href="@{/dashboard}"
+                           class="px-3.5 py-2 rounded-xl text-sm font-semibold text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition">
+                            Events
+                        </a>
+                        <a th:href="@{/my-bookings}"
+                           class="px-3.5 py-2 rounded-xl text-sm font-semibold text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition">
+                            My Bookings
+                        </a>
+                        <a th:href="@{/organizer}"
+                           class="px-3.5 py-2 rounded-xl text-sm font-semibold text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition">
+                            Organizer
+                        </a>
+                        <a th:href="@{/admin/events}"
+                           class="px-3.5 py-2 rounded-xl text-sm font-bold bg-purple-50 text-purple-700 transition flex items-center space-x-1 border border-purple-200">
+                            <span class="w-2 h-2 rounded-full bg-purple-600"></span>
+                            <span>Admin Approval</span>
+                            <span class="ml-1 px-1.5 py-0.5 rounded-full text-[10px] bg-purple-200 text-purple-800 font-extrabold"
+                                  th:text="${pendingEvents.size()}">0</span>
+                        </a>
+                    </div>
+                </div>
+
+                <!-- Right Side: Account & Logout -->
+                <div class="flex items-center space-x-3">
+                    <a th:href="@{/account}"
+                       class="flex items-center space-x-2 px-3 py-1.5 rounded-xl hover:bg-slate-100 transition border border-transparent hover:border-slate-200">
+                        <div class="w-8 h-8 rounded-lg bg-indigo-100 text-indigo-700 font-bold flex items-center justify-center text-xs">
+                            <span th:text="${fullName != null ? fullName.substring(0, 1) : 'U'}">U</span>
+                        </div>
+                        <div class="hidden sm:flex flex-col text-left">
+                            <span class="text-xs font-bold text-slate-800" th:text="${fullName}">User Name</span>
+                            <span class="text-[10px] text-slate-400 font-medium">Account</span>
+                        </div>
+                    </a>
+
+                    <button type="button" onclick="logoutUser()"
+                       class="inline-flex items-center space-x-1 px-3 py-2 rounded-xl bg-slate-100 hover:bg-rose-50 text-slate-700 hover:text-rose-600 text-xs font-semibold transition border border-slate-200 cursor-pointer">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>
+                        </svg>
+                        <span>Logout</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Container -->
+    <main class="flex-grow max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-10 w-full">
+        <!-- Banner -->
+        <div class="bg-gradient-to-r from-purple-800 to-indigo-800 text-white p-6 sm:p-8 rounded-2xl shadow-lg mb-8">
+            <div class="flex items-center justify-between">
+                <div>
+                    <span class="inline-block px-3 py-1 bg-white/20 backdrop-blur-md rounded-full text-xs font-bold tracking-wide uppercase mb-2">
+                        Main Admin Portal
+                    </span>
+                    <h1 class="text-2xl sm:text-3xl font-extrabold tracking-tight">Pending Event Approval Requests</h1>
+                    <p class="text-purple-100 text-sm mt-1">Review organizer submissions. Once approved, the event will instantly appear on the public QuickPass dashboard.</p>
+                </div>
+            </div>
+        </div>
+
+        <div id="actionAlert" class="hidden mb-6 p-4 rounded-xl text-sm font-medium"></div>
+
+        <!-- Empty State -->
+        <div th:if="${pendingEvents == null || pendingEvents.isEmpty()}" class="bg-white rounded-2xl border border-slate-200 p-12 text-center shadow-sm">
+            <div class="w-14 h-14 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center mx-auto mb-3">
+                <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                </svg>
+            </div>
+            <h3 class="text-lg font-bold text-slate-800">No pending approval requests</h3>
+            <p class="text-slate-500 text-sm mt-1">All submitted events have been reviewed.</p>
+        </div>
+
+        <!-- Pending Events List -->
+        <div th:if="${pendingEvents != null && !pendingEvents.isEmpty()}" class="space-y-6">
+            <div th:each="event : ${pendingEvents}" th:id="'eventCard-' + ${event.id}"
+                 class="bg-white rounded-2xl border border-slate-200/90 p-6 sm:p-8 shadow-sm">
+                
+                <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
+                    <div class="space-y-3 flex-1">
+                        <!-- Category and Organizer info -->
+                        <div class="flex items-center space-x-3 text-xs">
+                            <span class="px-2.5 py-1 rounded-lg bg-indigo-50 text-indigo-700 font-bold uppercase tracking-wider"
+                                  th:text="${event.category}">
+                                Category
+                            </span>
+                            <span class="text-slate-500 font-medium">
+                                Organizer: <strong class="text-slate-800" th:text="${event.organizer != null ? event.organizer.fullName : 'Organizer'}">Organizer</strong> 
+                                (<span th:text="${event.organizer != null ? event.organizer.email : ''}">email</span>)
+                            </span>
+                        </div>
+
+                        <!-- Title -->
+                        <h3 class="text-2xl font-extrabold text-slate-900 tracking-tight" th:text="${event.title}">
+                            Event Name
+                        </h3>
+
+                        <!-- Description -->
+                        <p class="text-slate-600 text-sm leading-relaxed" th:text="${event.description}">
+                            Description
+                        </p>
+
+                        <!-- Logistics -->
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs text-slate-600 bg-slate-50 p-3.5 rounded-xl border border-slate-100">
+                            <div>
+                                <strong>Venue:</strong> <span th:text="${event.venue}">Venue location</span>
+                            </div>
+                            <div>
+                                <strong>Event Date:</strong> <span th:text="${#temporals.format(event.eventDateTime, 'dd MMM yyyy, hh:mm a')}">Date</span>
+                            </div>
+                            <div>
+                                <strong>Booking Opens:</strong> <span th:text="${#temporals.format(event.bookingStartDate, 'dd MMM yyyy, hh:mm a')}">Start</span>
+                            </div>
+                            <div>
+                                <strong>Booking Closes:</strong> <span th:text="${#temporals.format(event.bookingEndDate, 'dd MMM yyyy, hh:mm a')}">End</span>
+                            </div>
+                        </div>
+
+                        <!-- Pass Tiers Pricing & Capacity -->
+                        <div class="flex flex-wrap gap-4 pt-1 text-xs">
+                            <div class="px-3 py-1.5 rounded-lg bg-slate-100 border border-slate-200 font-medium">
+                                Normal: <strong>$<span th:text="${event.normalPrice}">40</span></strong> (<span th:text="${event.normalCapacity}">100</span> passes)
+                            </div>
+                            <div class="px-3 py-1.5 rounded-lg bg-indigo-50 border border-indigo-200 text-indigo-800 font-medium">
+                                VIP: <strong>$<span th:text="${event.vipPrice}">99</span></strong> (<span th:text="${event.vipCapacity}">40</span> passes)
+                            </div>
+                            <div class="px-3 py-1.5 rounded-lg bg-purple-50 border border-purple-200 text-purple-800 font-medium">
+                                VVIP: <strong>$<span th:text="${event.vvipPrice}">199</span></strong> (<span th:text="${event.vvipCapacity}">15</span> passes)
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Action Buttons -->
+                    <div class="flex lg:flex-col gap-3 shrink-0">
+                        <button type="button"
+                                th:attr="onclick='approveEvent(' + ${event.id} + ')'"
+                                class="flex-1 lg:flex-initial px-5 py-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 active:scale-[0.98] text-white font-bold text-sm shadow-md shadow-emerald-100 transition flex items-center justify-center space-x-1.5">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                            </svg>
+                            <span>Approve Event</span>
+                        </button>
+
+                        <button type="button"
+                                th:attr="onclick='rejectEvent(' + ${event.id} + ')'"
+                                class="flex-1 lg:flex-initial px-5 py-3 rounded-xl bg-slate-100 hover:bg-rose-50 text-slate-700 hover:text-rose-700 active:scale-[0.98] font-bold text-sm border border-slate-200 transition flex items-center justify-center space-x-1.5">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                            </svg>
+                            <span>Reject</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="border-t border-slate-200 py-6 text-center text-slate-400 text-xs">
+        QuickPass &bull; Built with Spring Boot, Thymeleaf, MySQL & JWT
+    </footer>
+
+    <script>
+        async function approveEvent(id) {
+            if (!confirm('Are you sure you want to approve this event? It will instantly be published for attendees to book.')) return;
+
+            const alertBox = document.getElementById('actionAlert');
+            try {
+                const res = await fetch(`/api/events/${id}/approve`, { method: 'POST' });
+                const data = await res.json();
+
+                if (res.ok) {
+                    alertBox.className = 'mb-6 p-4 rounded-xl text-sm font-medium bg-emerald-50 border border-emerald-200 text-emerald-800';
+                    alertBox.textContent = data.message || 'Event approved successfully!';
+                    alertBox.classList.remove('hidden');
+
+                    const card = document.getElementById(`eventCard-${id}`);
+                    if (card) card.remove();
+                } else {
+                    alert(data.error || 'Approval failed');
+                }
+            } catch (err) {
+                alert('Connection error');
+            }
+        }
+
+        async function rejectEvent(id) {
+            if (!confirm('Are you sure you want to reject this event?')) return;
+
+            const alertBox = document.getElementById('actionAlert');
+            try {
+                const res = await fetch(`/api/events/${id}/reject`, { method: 'POST' });
+                const data = await res.json();
+
+                if (res.ok) {
+                    alertBox.className = 'mb-6 p-4 rounded-xl text-sm font-medium bg-rose-50 border border-rose-200 text-rose-800';
+                    alertBox.textContent = data.message || 'Event rejected.';
+                    alertBox.classList.remove('hidden');
+
+                    const card = document.getElementById(`eventCard-${id}`);
+                    if (card) card.remove();
+                } else {
+                    alert(data.error || 'Rejection failed');
+                }
+            } catch (err) {
+                alert('Connection error');
+            }
+        }
+
+        async function logoutUser() {
+            try {
+                localStorage.removeItem('quickpass_token');
+                await fetch('/api/auth/logout', { method: 'POST' });
+            } catch (err) {
+                console.error(err);
+            } finally {
+                window.location.href = '/login?logout';
+            }
+        }
+    </script>
+</body>
+</html>
+
