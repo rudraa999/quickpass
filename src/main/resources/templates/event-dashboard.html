@@ -1,0 +1,963 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title th:text="'QuickPass - ' + ${analytics.title} + ' Dashboard'">QuickPass - Event Dashboard</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Plus Jakarta Sans', sans-serif; }
+        .tab-btn.active {
+            background-color: #4f46e5;
+            color: #ffffff;
+            box-shadow: 0 4px 12px rgba(79, 70, 229, 0.25);
+        }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800 min-h-screen flex flex-col antialiased selection:bg-indigo-100 selection:text-indigo-700">
+
+    <!-- Top Navigation Bar -->
+    <nav class="bg-white border-b border-slate-200 sticky top-0 z-40 shadow-sm">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-16">
+                <!-- Brand Logo & Main Nav Links -->
+                <div class="flex items-center space-x-8">
+                    <a th:href="@{/dashboard}" class="flex items-center space-x-3">
+                        <div class="w-10 h-10 rounded-xl bg-indigo-600 flex items-center justify-center text-white shadow-md shadow-indigo-200">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z"/>
+                            </svg>
+                        </div>
+                        <span class="text-xl font-extrabold text-slate-900 tracking-tight">QuickPass</span>
+                    </a>
+
+                    <!-- Nav Items -->
+                    <div class="hidden md:flex items-center space-x-1">
+                        <a th:href="@{/dashboard}"
+                           class="px-3.5 py-2 rounded-xl text-sm font-semibold text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition">
+                            Events
+                        </a>
+                        <a th:href="@{/my-bookings}"
+                           class="px-3.5 py-2 rounded-xl text-sm font-semibold text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition">
+                            My Bookings
+                        </a>
+                        <a th:href="@{/organizer}"
+                           class="px-3.5 py-2 rounded-xl text-sm font-bold bg-indigo-50 text-indigo-700">
+                            Organizer
+                        </a>
+                        <!-- Admin Approval: Strictly visible ONLY to Main Admin -->
+                        <a th:if="${isAdmin}" th:href="@{/admin/events}"
+                           class="px-3.5 py-2 rounded-xl text-sm font-bold bg-purple-50 text-purple-700 border border-purple-200 hover:bg-purple-100 transition flex items-center space-x-1.5 shadow-sm">
+                            <span class="w-2 h-2 rounded-full bg-purple-600"></span>
+                            <span>Admin Approval</span>
+                        </a>
+                    </div>
+                </div>
+
+                <!-- Right Side: Account & Logout -->
+                <div class="flex items-center space-x-3">
+                    <a th:href="@{/account}"
+                       class="flex items-center space-x-2 px-3 py-1.5 rounded-xl hover:bg-slate-100 transition border border-transparent hover:border-slate-200">
+                        <div class="w-8 h-8 rounded-lg bg-indigo-100 text-indigo-700 font-bold flex items-center justify-center text-xs">
+                            <span th:text="${fullName != null ? fullName.substring(0, 1) : 'U'}">U</span>
+                        </div>
+                        <div class="hidden sm:flex flex-col text-left">
+                            <span class="text-xs font-bold text-slate-800" th:text="${fullName}">User Name</span>
+                            <span class="text-[10px] text-slate-400 font-medium">Account</span>
+                        </div>
+                    </a>
+
+                    <button type="button" onclick="logoutUser()"
+                       class="inline-flex items-center space-x-1 px-3 py-2 rounded-xl bg-slate-100 hover:bg-rose-50 text-slate-700 hover:text-rose-600 text-xs font-semibold transition border border-slate-200 cursor-pointer">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>
+                        </svg>
+                        <span>Logout</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Sub-Header / Breadcrumb Banner -->
+    <header class="bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 text-white py-8 px-4 sm:px-6 lg:px-8 border-b border-slate-800">
+        <div class="max-w-7xl mx-auto space-y-4">
+            <!-- Breadcrumb Navigation -->
+            <div class="flex items-center space-x-2 text-xs text-indigo-300">
+                <a th:href="@{/organizer}" class="hover:text-white transition flex items-center space-x-1">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+                    </svg>
+                    <span>Organizer Hub</span>
+                </a>
+                <span>/</span>
+                <span class="text-white font-semibold truncate max-w-xs sm:max-w-md" th:text="${analytics.title}">Event Title</span>
+            </div>
+
+            <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+                <div>
+                    <div class="flex flex-wrap items-center gap-2 mb-2">
+                        <span class="px-2.5 py-0.5 rounded-lg bg-indigo-500/20 text-indigo-300 border border-indigo-400/30 text-xs font-bold uppercase tracking-wider"
+                              th:text="${analytics.category}">
+                            Category
+                        </span>
+
+                        <span th:if="${analytics.status.name() == 'APPROVED'}"
+                              class="px-3 py-0.5 rounded-full text-xs font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-400/30 flex items-center space-x-1.5">
+                            <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                            <span>Live & Booking Open</span>
+                        </span>
+                        <span th:if="${analytics.status.name() == 'PENDING_APPROVAL'}"
+                              class="px-3 py-0.5 rounded-full text-xs font-bold bg-amber-500/20 text-amber-300 border border-amber-400/30">
+                            Pending Admin Approval
+                        </span>
+                    </div>
+
+                    <h1 class="text-2xl sm:text-3xl font-extrabold tracking-tight" th:text="${analytics.title}">Event Title</h1>
+                    
+                    <div class="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-slate-300 mt-2">
+                        <span class="flex items-center space-x-1">
+                            <svg class="w-4 h-4 text-rose-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>
+                            </svg>
+                            <span th:text="${analytics.venue}">Venue location</span>
+                        </span>
+                        <span>&bull;</span>
+                        <span class="flex items-center space-x-1">
+                            <svg class="w-4 h-4 text-slate-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                            </svg>
+                            <span th:text="${#temporals.format(analytics.eventDateTime, 'dd MMM yyyy &bull; hh:mm a')}">Date</span>
+                        </span>
+                    </div>
+                </div>
+
+                <!-- Header Actions -->
+                <div class="flex flex-wrap items-center gap-2.5">
+                    <a th:href="@{/dashboard}" class="inline-flex items-center space-x-1.5 px-3.5 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-white text-xs font-bold transition">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/>
+                        </svg>
+                        <span>Public Page</span>
+                    </a>
+
+                    <button type="button" onclick="exportGuestListCsv()" class="inline-flex items-center space-x-1.5 px-3.5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold shadow-md shadow-indigo-900/30 transition">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
+                        </svg>
+                        <span>Export Attendees (CSV)</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content Container -->
+    <main class="flex-grow max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 w-full space-y-8">
+
+        <!-- Top 4 KPI Metrics Cards -->
+        <section class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <!-- Metric 1: Total Revenue -->
+            <div class="bg-white rounded-2xl p-5 border border-slate-200/90 shadow-sm flex items-center space-x-4">
+                <div class="w-12 h-12 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                    </svg>
+                </div>
+                <div>
+                    <span class="text-xs font-semibold text-slate-500 uppercase tracking-wider block">Gross Sales Revenue</span>
+                    <span class="text-2xl font-black text-slate-900" id="topRevenueDisplay">
+                        $<span th:text="${#numbers.formatDecimal(analytics.totalRevenue, 1, 2)}">0.00</span>
+                    </span>
+                    <span class="text-[11px] text-slate-400 font-medium block">
+                        Across <strong class="text-slate-700" th:text="${analytics.totalOrders}">0</strong> orders
+                    </span>
+                </div>
+            </div>
+
+            <!-- Metric 2: Total Passes Sold -->
+            <div class="bg-white rounded-2xl p-5 border border-slate-200/90 shadow-sm flex items-center space-x-4">
+                <div class="w-12 h-12 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center shrink-0">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z"/>
+                    </svg>
+                </div>
+                <div>
+                    <span class="text-xs font-semibold text-slate-500 uppercase tracking-wider block">Total Passes Sold</span>
+                    <span class="text-2xl font-black text-slate-900">
+                        <span id="topSoldDisplay" th:text="${analytics.totalSold}">0</span> / <span th:text="${analytics.totalCapacity}">0</span>
+                    </span>
+                    <span class="text-[11px] text-indigo-600 font-bold block">
+                        <span id="topSoldPercentDisplay" th:text="${#numbers.formatDecimal(analytics.soldPercentage, 1, 1)}">0.0</span>% Capacity Booked
+                    </span>
+                </div>
+            </div>
+
+            <!-- Metric 3: Remaining Inventory Stock -->
+            <div class="bg-white rounded-2xl p-5 border border-slate-200/90 shadow-sm flex items-center space-x-4">
+                <div class="w-12 h-12 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center shrink-0">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/>
+                    </svg>
+                </div>
+                <div>
+                    <span class="text-xs font-semibold text-slate-500 uppercase tracking-wider block">Available Stock Left</span>
+                    <span class="text-2xl font-black text-purple-700">
+                        <span th:text="${analytics.totalAvailable}">0</span>
+                    </span>
+                    <span class="text-[11px] text-slate-500 font-medium block">
+                        Unsold tickets remaining
+                    </span>
+                </div>
+            </div>
+
+            <!-- Metric 4: Event-Day Entry Check-Ins -->
+            <div class="bg-white rounded-2xl p-5 border border-slate-200/90 shadow-sm flex items-center space-x-4">
+                <div class="w-12 h-12 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center shrink-0">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                    </svg>
+                </div>
+                <div>
+                    <span class="text-xs font-semibold text-slate-500 uppercase tracking-wider block">Event-Day Checked-In</span>
+                    <span class="text-2xl font-black text-amber-600">
+                        <span id="topScannedDisplay" th:text="${analytics.totalScanned}">0</span> / <span id="topTotalSoldForScan" th:text="${analytics.totalSold}">0</span>
+                    </span>
+                    <span class="text-[11px] text-amber-700 font-bold block">
+                        <span id="topAttendanceRateDisplay" th:text="${#numbers.formatDecimal(analytics.checkInPercentage, 1, 1)}">0.0</span>% Attendance Rate
+                    </span>
+                </div>
+            </div>
+        </section>
+
+        <!-- Navigation Tabs Bar -->
+        <div class="bg-white rounded-2xl p-2 border border-slate-200/90 shadow-sm flex flex-wrap gap-2">
+            <button type="button" onclick="switchTab('salesTab', this)"
+                    class="tab-btn active px-4 py-2.5 rounded-xl text-xs font-bold transition flex items-center space-x-2">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
+                </svg>
+                <span>Sales Dashboard</span>
+            </button>
+
+            <button type="button" onclick="switchTab('inventoryTab', this)"
+                    class="tab-btn px-4 py-2.5 rounded-xl text-xs font-bold text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition flex items-center space-x-2">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/>
+                </svg>
+                <span>Ticket Inventory</span>
+            </button>
+
+            <button type="button" onclick="switchTab('entryTab', this)"
+                    class="tab-btn px-4 py-2.5 rounded-xl text-xs font-bold text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition flex items-center space-x-2">
+                <svg class="w-4 h-4 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z"/>
+                </svg>
+                <span>Event-Day Entry & Scanner</span>
+            </button>
+
+            <button type="button" onclick="switchTab('manifestTab', this)"
+                    class="tab-btn px-4 py-2.5 rounded-xl text-xs font-bold text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition flex items-center space-x-2">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/>
+                </svg>
+                <span>Guest List & Attendees</span>
+                <span class="ml-1.5 px-2 py-0.5 rounded-full text-[10px] bg-indigo-100 text-indigo-700 font-extrabold"
+                      th:text="${analytics.bookings.size()}">0</span>
+            </button>
+        </div>
+
+        <!-- ==================== TAB 1: SALES & REVENUE DASHBOARD ==================== -->
+        <section id="salesTab" class="space-y-6">
+            <!-- Capacity Utilization Bar -->
+            <div class="bg-white rounded-2xl p-6 border border-slate-200/90 shadow-sm space-y-3">
+                <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                    <div>
+                        <h3 class="text-base font-extrabold text-slate-900">Overall Sales Pacing vs Venue Capacity</h3>
+                        <p class="text-xs text-slate-500">Live booking conversion across all pass tiers</p>
+                    </div>
+                    <div class="text-xs font-extrabold text-indigo-700">
+                        <span th:text="${analytics.totalSold}">0</span> / <span th:text="${analytics.totalCapacity}">0</span> Passes Sold
+                        (<span th:text="${#numbers.formatDecimal(analytics.soldPercentage, 1, 1)}">0.0</span>%)
+                    </div>
+                </div>
+                <div class="w-full bg-slate-100 h-3.5 rounded-full overflow-hidden p-0.5 border border-slate-200/60">
+                    <div class="bg-gradient-to-r from-indigo-500 to-indigo-600 h-full rounded-full transition-all duration-700 shadow-sm"
+                         th:style="'width: ' + ${analytics.soldPercentage} + '%;'"></div>
+                </div>
+            </div>
+
+            <!-- Sales By Pass Type Table -->
+            <div class="bg-white rounded-2xl border border-slate-200/90 shadow-sm overflow-hidden">
+                <div class="p-6 border-b border-slate-100 flex items-center justify-between">
+                    <div>
+                        <h3 class="text-base font-extrabold text-slate-900">Sales Breakdown By Pass Tier</h3>
+                        <p class="text-xs text-slate-500">Revenue, volume, and tier breakdown</p>
+                    </div>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left text-xs text-slate-700">
+                        <thead class="bg-slate-50 border-b border-slate-200 text-[10px] uppercase font-bold text-slate-500">
+                            <tr>
+                                <th class="p-4">Pass Tier</th>
+                                <th class="p-4">Unit Price</th>
+                                <th class="p-4">Capacity</th>
+                                <th class="p-4">Sold</th>
+                                <th class="p-4">Pacing (%)</th>
+                                <th class="p-4">Gross Revenue</th>
+                                <th class="p-4">Status</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-slate-100 font-medium">
+                            <!-- Normal Tier Row -->
+                            <tr class="hover:bg-slate-50/70 transition">
+                                <td class="p-4">
+                                    <span class="px-2.5 py-1 rounded-md text-xs font-bold bg-slate-100 text-slate-800 border border-slate-200">
+                                        Normal Pass
+                                    </span>
+                                </td>
+                                <td class="p-4 font-bold text-slate-900">$<span th:text="${analytics.normal.price}">0</span></td>
+                                <td class="p-4" th:text="${analytics.normal.capacity}">0</td>
+                                <td class="p-4 font-extrabold text-slate-900" th:text="${analytics.normal.sold}">0</td>
+                                <td class="p-4">
+                                    <div class="flex items-center space-x-2">
+                                        <span class="w-10 text-right font-bold text-slate-700" th:text="${#numbers.formatDecimal(analytics.normal.soldPercentage, 1, 1)} + '%'">0%</span>
+                                        <div class="w-24 bg-slate-200 h-2 rounded-full overflow-hidden">
+                                            <div class="bg-slate-700 h-2 rounded-full" th:style="'width: ' + ${analytics.normal.soldPercentage} + '%;'"></div>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td class="p-4 font-bold text-emerald-600">$<span th:text="${#numbers.formatDecimal(analytics.normal.revenue, 1, 2)}">0.00</span></td>
+                                <td class="p-4">
+                                    <span class="px-2 py-0.5 rounded text-[11px] font-bold"
+                                          th:classappend="${analytics.normal.available <= 0} ? 'bg-rose-100 text-rose-800' : 'bg-emerald-100 text-emerald-800'"
+                                          th:text="${analytics.normal.available <= 0 ? 'SOLD OUT' : 'AVAILABLE'}">AVAILABLE</span>
+                                </td>
+                            </tr>
+
+                            <!-- VIP Tier Row -->
+                            <tr class="hover:bg-slate-50/70 transition bg-indigo-50/20">
+                                <td class="p-4">
+                                    <span class="px-2.5 py-1 rounded-md text-xs font-bold bg-indigo-100 text-indigo-800 border border-indigo-200">
+                                        VIP Pass
+                                    </span>
+                                </td>
+                                <td class="p-4 font-bold text-indigo-900">$<span th:text="${analytics.vip.price}">0</span></td>
+                                <td class="p-4" th:text="${analytics.vip.capacity}">0</td>
+                                <td class="p-4 font-extrabold text-indigo-950" th:text="${analytics.vip.sold}">0</td>
+                                <td class="p-4">
+                                    <div class="flex items-center space-x-2">
+                                        <span class="w-10 text-right font-bold text-indigo-700" th:text="${#numbers.formatDecimal(analytics.vip.soldPercentage, 1, 1)} + '%'">0%</span>
+                                        <div class="w-24 bg-indigo-100 h-2 rounded-full overflow-hidden">
+                                            <div class="bg-indigo-600 h-2 rounded-full" th:style="'width: ' + ${analytics.vip.soldPercentage} + '%;'"></div>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td class="p-4 font-bold text-emerald-600">$<span th:text="${#numbers.formatDecimal(analytics.vip.revenue, 1, 2)}">0.00</span></td>
+                                <td class="p-4">
+                                    <span class="px-2 py-0.5 rounded text-[11px] font-bold"
+                                          th:classappend="${analytics.vip.available <= 0} ? 'bg-rose-100 text-rose-800' : 'bg-emerald-100 text-emerald-800'"
+                                          th:text="${analytics.vip.available <= 0 ? 'SOLD OUT' : 'AVAILABLE'}">AVAILABLE</span>
+                                </td>
+                            </tr>
+
+                            <!-- VVIP Tier Row -->
+                            <tr class="hover:bg-slate-50/70 transition bg-purple-50/20">
+                                <td class="p-4">
+                                    <span class="px-2.5 py-1 rounded-md text-xs font-bold bg-purple-100 text-purple-800 border border-purple-200">
+                                        VVIP Pass
+                                    </span>
+                                </td>
+                                <td class="p-4 font-bold text-purple-900">$<span th:text="${analytics.vvip.price}">0</span></td>
+                                <td class="p-4" th:text="${analytics.vvip.capacity}">0</td>
+                                <td class="p-4 font-extrabold text-purple-950" th:text="${analytics.vvip.sold}">0</td>
+                                <td class="p-4">
+                                    <div class="flex items-center space-x-2">
+                                        <span class="w-10 text-right font-bold text-purple-700" th:text="${#numbers.formatDecimal(analytics.vvip.soldPercentage, 1, 1)} + '%'">0%</span>
+                                        <div class="w-24 bg-purple-100 h-2 rounded-full overflow-hidden">
+                                            <div class="bg-purple-600 h-2 rounded-full" th:style="'width: ' + ${analytics.vvip.soldPercentage} + '%;'"></div>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td class="p-4 font-bold text-emerald-600">$<span th:text="${#numbers.formatDecimal(analytics.vvip.revenue, 1, 2)}">0.00</span></td>
+                                <td class="p-4">
+                                    <span class="px-2 py-0.5 rounded text-[11px] font-bold"
+                                          th:classappend="${analytics.vvip.available <= 0} ? 'bg-rose-100 text-rose-800' : 'bg-emerald-100 text-emerald-800'"
+                                          th:text="${analytics.vvip.available <= 0 ? 'SOLD OUT' : 'AVAILABLE'}">AVAILABLE</span>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- ==================== TAB 2: TICKET INVENTORY MANAGEMENT ==================== -->
+        <section id="inventoryTab" class="hidden space-y-6">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <!-- Normal Pass Inventory Card -->
+                <div class="bg-white rounded-2xl p-6 border border-slate-200/90 shadow-sm space-y-4">
+                    <div class="flex items-center justify-between">
+                        <span class="px-2.5 py-1 rounded-md text-xs font-bold bg-slate-100 text-slate-800 border border-slate-200">
+                            Normal Pass
+                        </span>
+                        <span class="px-2.5 py-1 rounded-full text-[10px] font-extrabold uppercase tracking-wider"
+                              th:classappend="${analytics.normal.available <= 0} ? 'bg-rose-100 text-rose-800' : (${analytics.normal.inventoryStatus == 'SELLING_FAST'} ? 'bg-amber-100 text-amber-800' : 'bg-emerald-100 text-emerald-800')"
+                              th:text="${analytics.normal.inventoryStatus == 'SOLD_OUT' ? 'Sold Out' : (analytics.normal.inventoryStatus == 'SELLING_FAST' ? 'Selling Fast' : 'In Stock')}">
+                            In Stock
+                        </span>
+                    </div>
+
+                    <div class="space-y-1">
+                        <span class="text-xs text-slate-500 font-medium">Available Remaining:</span>
+                        <div class="text-3xl font-black text-slate-900">
+                            <span th:text="${analytics.normal.available}">0</span>
+                            <span class="text-sm font-normal text-slate-400">/ <span th:text="${analytics.normal.capacity}">0</span></span>
+                        </div>
+                    </div>
+
+                    <div class="space-y-1.5">
+                        <div class="flex justify-between text-xs text-slate-500">
+                            <span>Inventory Allocation</span>
+                            <span class="font-bold text-slate-800" th:text="${#numbers.formatDecimal(analytics.normal.soldPercentage, 1, 1)} + '% Sold'">0%</span>
+                        </div>
+                        <div class="w-full bg-slate-100 h-2.5 rounded-full overflow-hidden">
+                            <div class="bg-slate-700 h-2.5 rounded-full" th:style="'width: ' + ${analytics.normal.soldPercentage} + '%;'"></div>
+                        </div>
+                    </div>
+
+                    <div class="pt-3 border-t border-slate-100 text-xs text-slate-500 flex justify-between">
+                        <span>Price per ticket:</span>
+                        <strong class="text-slate-800">$<span th:text="${analytics.normal.price}">0</span></strong>
+                    </div>
+                </div>
+
+                <!-- VIP Pass Inventory Card -->
+                <div class="bg-white rounded-2xl p-6 border border-indigo-200/80 shadow-sm space-y-4">
+                    <div class="flex items-center justify-between">
+                        <span class="px-2.5 py-1 rounded-md text-xs font-bold bg-indigo-100 text-indigo-800 border border-indigo-200">
+                            VIP Pass
+                        </span>
+                        <span class="px-2.5 py-1 rounded-full text-[10px] font-extrabold uppercase tracking-wider"
+                              th:classappend="${analytics.vip.available <= 0} ? 'bg-rose-100 text-rose-800' : (${analytics.vip.inventoryStatus == 'SELLING_FAST'} ? 'bg-amber-100 text-amber-800' : 'bg-emerald-100 text-emerald-800')"
+                              th:text="${analytics.vip.inventoryStatus == 'SOLD_OUT' ? 'Sold Out' : (analytics.vip.inventoryStatus == 'SELLING_FAST' ? 'Selling Fast' : 'In Stock')}">
+                            In Stock
+                        </span>
+                    </div>
+
+                    <div class="space-y-1">
+                        <span class="text-xs text-indigo-600 font-medium">Available Remaining:</span>
+                        <div class="text-3xl font-black text-indigo-950">
+                            <span th:text="${analytics.vip.available}">0</span>
+                            <span class="text-sm font-normal text-slate-400">/ <span th:text="${analytics.vip.capacity}">0</span></span>
+                        </div>
+                    </div>
+
+                    <div class="space-y-1.5">
+                        <div class="flex justify-between text-xs text-slate-500">
+                            <span>Inventory Allocation</span>
+                            <span class="font-bold text-indigo-700" th:text="${#numbers.formatDecimal(analytics.vip.soldPercentage, 1, 1)} + '% Sold'">0%</span>
+                        </div>
+                        <div class="w-full bg-indigo-50 h-2.5 rounded-full overflow-hidden">
+                            <div class="bg-indigo-600 h-2.5 rounded-full" th:style="'width: ' + ${analytics.vip.soldPercentage} + '%;'"></div>
+                        </div>
+                    </div>
+
+                    <div class="pt-3 border-t border-slate-100 text-xs text-slate-500 flex justify-between">
+                        <span>Price per ticket:</span>
+                        <strong class="text-slate-800">$<span th:text="${analytics.vip.price}">0</span></strong>
+                    </div>
+                </div>
+
+                <!-- VVIP Pass Inventory Card -->
+                <div class="bg-white rounded-2xl p-6 border border-purple-200/80 shadow-sm space-y-4">
+                    <div class="flex items-center justify-between">
+                        <span class="px-2.5 py-1 rounded-md text-xs font-bold bg-purple-100 text-purple-800 border border-purple-200">
+                            VVIP Pass
+                        </span>
+                        <span class="px-2.5 py-1 rounded-full text-[10px] font-extrabold uppercase tracking-wider"
+                              th:classappend="${analytics.vvip.available <= 0} ? 'bg-rose-100 text-rose-800' : (${analytics.vvip.inventoryStatus == 'SELLING_FAST'} ? 'bg-amber-100 text-amber-800' : 'bg-emerald-100 text-emerald-800')"
+                              th:text="${analytics.vvip.inventoryStatus == 'SOLD_OUT' ? 'Sold Out' : (analytics.vvip.inventoryStatus == 'SELLING_FAST' ? 'Selling Fast' : 'In Stock')}">
+                            In Stock
+                        </span>
+                    </div>
+
+                    <div class="space-y-1">
+                        <span class="text-xs text-purple-600 font-medium">Available Remaining:</span>
+                        <div class="text-3xl font-black text-purple-950">
+                            <span th:text="${analytics.vvip.available}">0</span>
+                            <span class="text-sm font-normal text-slate-400">/ <span th:text="${analytics.vvip.capacity}">0</span></span>
+                        </div>
+                    </div>
+
+                    <div class="space-y-1.5">
+                        <div class="flex justify-between text-xs text-slate-500">
+                            <span>Inventory Allocation</span>
+                            <span class="font-bold text-purple-700" th:text="${#numbers.formatDecimal(analytics.vvip.soldPercentage, 1, 1)} + '% Sold'">0%</span>
+                        </div>
+                        <div class="w-full bg-purple-50 h-2.5 rounded-full overflow-hidden">
+                            <div class="bg-purple-600 h-2.5 rounded-full" th:style="'width: ' + ${analytics.vvip.soldPercentage} + '%;'"></div>
+                        </div>
+                    </div>
+
+                    <div class="pt-3 border-t border-slate-100 text-xs text-slate-500 flex justify-between">
+                        <span>Price per ticket:</span>
+                        <strong class="text-slate-800">$<span th:text="${analytics.vvip.price}">0</span></strong>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Booking Schedule Card -->
+            <div class="bg-white rounded-2xl p-6 border border-slate-200/90 shadow-sm space-y-3">
+                <h4 class="text-sm font-extrabold text-slate-900">Booking Window Timeline</h4>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs text-slate-600 bg-slate-50 p-4 rounded-xl border border-slate-200/60">
+                    <div>
+                        <span class="text-slate-400 block font-semibold uppercase tracking-wider text-[10px]">Booking Opened On</span>
+                        <strong class="text-slate-800 text-sm" th:text="${#temporals.format(analytics.bookingStartDate, 'dd MMMM yyyy &bull; hh:mm a')}">Date</strong>
+                    </div>
+                    <div>
+                        <span class="text-slate-400 block font-semibold uppercase tracking-wider text-[10px]">Booking Closes On</span>
+                        <strong class="text-slate-800 text-sm" th:text="${#temporals.format(analytics.bookingEndDate, 'dd MMMM yyyy &bull; hh:mm a')}">Date</strong>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ==================== TAB 3: EVENT-DAY ENTRY ANALYTICS & SCANNER ==================== -->
+        <section id="entryTab" class="hidden space-y-6">
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <!-- Left 2 Cols: Entry Performance & Tier Rates -->
+                <div class="lg:col-span-2 space-y-6">
+                    <div class="bg-white rounded-2xl p-6 border border-slate-200/90 shadow-sm space-y-5">
+                        <div>
+                            <h3 class="text-base font-extrabold text-slate-900">Live Gate Entry & Check-In Velocity</h3>
+                            <p class="text-xs text-slate-500">Real-time attendance tracking for gate management</p>
+                        </div>
+
+                        <!-- Progress Bar of Checked In vs Total Sold -->
+                        <div class="space-y-2">
+                            <div class="flex items-center justify-between text-xs font-bold">
+                                <span class="text-slate-700">Attendance Rate</span>
+                                <span class="text-amber-600">
+                                    <span id="tabScannedDisplay" th:text="${analytics.totalScanned}">0</span> / <span th:text="${analytics.totalSold}">0</span> Checked In
+                                    (<span id="tabCheckInPercentDisplay" th:text="${#numbers.formatDecimal(analytics.checkInPercentage, 1, 1)}">0.0</span>%)
+                                </span>
+                            </div>
+                            <div class="w-full bg-slate-100 h-3.5 rounded-full overflow-hidden p-0.5 border border-slate-200/60">
+                                <div id="entryProgressBar"
+                                     class="bg-gradient-to-r from-amber-400 to-amber-500 h-full rounded-full transition-all duration-500 shadow-sm"
+                                     th:style="'width: ' + ${analytics.checkInPercentage} + '%;'"></div>
+                            </div>
+                        </div>
+
+                        <!-- Stats Grid for remaining attendees -->
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
+                            <div class="p-4 rounded-xl bg-amber-50/60 border border-amber-200/60 flex items-center space-x-3">
+                                <div class="w-10 h-10 rounded-lg bg-amber-500 text-white flex items-center justify-center font-bold">
+                                    ✓
+                                </div>
+                                <div>
+                                    <span class="text-[11px] font-bold text-amber-800 uppercase block">Total Admitted</span>
+                                    <span class="text-xl font-black text-amber-950" id="liveTotalAdmitted" th:text="${analytics.totalScanned}">0</span>
+                                </div>
+                            </div>
+
+                            <div class="p-4 rounded-xl bg-slate-100 border border-slate-200 flex items-center space-x-3">
+                                <div class="w-10 h-10 rounded-lg bg-slate-700 text-white flex items-center justify-center font-bold">
+                                    ⏳
+                                </div>
+                                <div>
+                                    <span class="text-[11px] font-bold text-slate-700 uppercase block">Pending Arrival</span>
+                                    <span class="text-xl font-black text-slate-900" id="livePendingArrival" th:text="${analytics.remainingAttendees}">0</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Check-ins per tier cards -->
+                        <div class="pt-3 border-t border-slate-100">
+                            <h4 class="text-xs font-bold uppercase tracking-wider text-slate-400 mb-3">Check-ins by Pass Tier</h4>
+                            <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
+                                <div class="p-3 rounded-xl bg-slate-50 border border-slate-200">
+                                    <span class="font-bold block text-slate-800 mb-1">Normal Pass</span>
+                                    <span class="text-lg font-black text-slate-900" id="normalScannedDisplay" th:text="${analytics.normal.scanned}">0</span>
+                                    <span class="text-slate-400"> / <span th:text="${analytics.normal.sold}">0</span></span>
+                                </div>
+
+                                <div class="p-3 rounded-xl bg-indigo-50/50 border border-indigo-200/60">
+                                    <span class="font-bold block text-indigo-900 mb-1">VIP Pass</span>
+                                    <span class="text-lg font-black text-indigo-950" id="vipScannedDisplay" th:text="${analytics.vip.scanned}">0</span>
+                                    <span class="text-indigo-400"> / <span th:text="${analytics.vip.sold}">0</span></span>
+                                </div>
+
+                                <div class="p-3 rounded-xl bg-purple-50/50 border border-purple-200/60">
+                                    <span class="font-bold block text-purple-900 mb-1">VVIP Pass</span>
+                                    <span class="text-lg font-black text-purple-950" id="vvipScannedDisplay" th:text="${analytics.vvip.scanned}">0</span>
+                                    <span class="text-purple-400"> / <span th:text="${analytics.vvip.sold}">0</span></span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Right Col: Built-in Live Ticket Scanner Widget -->
+                <div class="space-y-4">
+                    <div class="bg-white rounded-2xl p-6 border border-slate-200/90 shadow-sm space-y-4">
+                        <div class="flex items-center space-x-2">
+                            <div class="w-8 h-8 rounded-lg bg-indigo-600 text-white flex items-center justify-center">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z"/>
+                                </svg>
+                            </div>
+                            <h3 class="text-base font-extrabold text-slate-900">Live Entry Scanner</h3>
+                        </div>
+                        <p class="text-xs text-slate-500">Scan QR codes with any handheld scanner, camera, or type ticket code:</p>
+
+                        <form id="inlineScannerForm" onsubmit="handleLiveScan(event)" class="space-y-3">
+                            <div class="relative">
+                                <input type="text" id="liveTicketInput" required placeholder="e.g. QP-A1B2C3D4 or scan QR"
+                                       class="w-full px-4 py-3 rounded-xl border border-slate-300 font-mono text-sm focus:outline-none focus:ring-2 focus:ring-indigo-600 shadow-sm">
+                                <button type="submit" id="liveScanBtn"
+                                        class="absolute right-1.5 top-1.5 px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold shadow-md transition">
+                                    Verify Pass
+                                </button>
+                            </div>
+                        </form>
+
+                        <!-- Scan Result Live Box -->
+                        <div id="liveScanResultBox" class="hidden p-4 rounded-xl text-xs space-y-2"></div>
+
+                        <!-- Recent Entries Live Feed -->
+                        <div class="pt-3 border-t border-slate-100">
+                            <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400 block mb-2">Gate Activity Log</span>
+                            <div id="liveActivityLog" class="space-y-1.5 max-h-56 overflow-y-auto text-xs text-slate-600">
+                                <p class="text-slate-400 italic">No tickets scanned yet in this session.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ==================== TAB 4: ATTENDEE MANIFEST & GUEST LIST ==================== -->
+        <section id="manifestTab" class="hidden space-y-6">
+            <div class="bg-white rounded-2xl border border-slate-200/90 shadow-sm overflow-hidden">
+                <div class="p-6 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                    <div>
+                        <h3 class="text-base font-extrabold text-slate-900">Attendee Guest List & Orders</h3>
+                        <p class="text-xs text-slate-500">Search attendees, verify bookings, or manually toggle entry check-in</p>
+                    </div>
+
+                    <!-- Search Input -->
+                    <div class="relative w-full sm:w-80">
+                        <input type="text" id="attendeeSearchInput" onkeyup="filterAttendeeRows()" placeholder="Search name, email, or ticket code..."
+                               class="w-full pl-9 pr-4 py-2 rounded-xl text-xs border border-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-600 shadow-sm">
+                        <svg class="w-4 h-4 text-slate-400 absolute left-3 top-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+                        </svg>
+                    </div>
+                </div>
+
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left text-xs text-slate-700">
+                        <thead class="bg-slate-50 border-b border-slate-200 text-[10px] uppercase font-bold text-slate-500">
+                            <tr>
+                                <th class="p-4">Attendee</th>
+                                <th class="p-4">Ticket Code</th>
+                                <th class="p-4">Pass Tier</th>
+                                <th class="p-4">Qty</th>
+                                <th class="p-4">Amount Paid</th>
+                                <th class="p-4">Booking Date</th>
+                                <th class="p-4">Entry Status</th>
+                                <th class="p-4 text-right">Quick Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="attendeeTableBody" class="divide-y divide-slate-100 font-medium">
+                            <!-- Empty row state if no bookings -->
+                            <tr th:if="${analytics.bookings == null || analytics.bookings.isEmpty()}">
+                                <td colspan="8" class="p-8 text-center text-slate-400">
+                                    No tickets booked yet for this event.
+                                </td>
+                            </tr>
+
+                            <!-- Booking Rows -->
+                            <tr th:each="b : ${analytics.bookings}"
+                                class="hover:bg-slate-50/70 transition attendee-row"
+                                th:attr="data-search=${#strings.toLowerCase(b.attendeeName + ' ' + b.attendeeEmail + ' ' + b.ticketCode)}"
+                                th:id="'bookingRow-' + ${b.bookingId}">
+                                
+                                <td class="p-4">
+                                    <div class="font-bold text-slate-900" th:text="${b.attendeeName}">Attendee Name</div>
+                                    <div class="text-[11px] text-slate-400 font-normal" th:text="${b.attendeeEmail}">email@example.com</div>
+                                </td>
+
+                                <td class="p-4 font-mono font-bold text-indigo-700" th:text="${b.ticketCode}">
+                                    QP-XXXXXXXX
+                                </td>
+
+                                <td class="p-4">
+                                    <span class="px-2.5 py-1 rounded-md text-[10px] font-extrabold uppercase"
+                                          th:classappend="${b.passType.name() == 'VVIP' ? 'bg-purple-100 text-purple-800 border border-purple-200' : (b.passType.name() == 'VIP' ? 'bg-indigo-100 text-indigo-800 border border-indigo-200' : 'bg-slate-100 text-slate-800 border border-slate-200')}"
+                                          th:text="${b.passType}">
+                                        VIP
+                                    </span>
+                                </td>
+
+                                <td class="p-4 font-extrabold text-slate-800" th:text="${b.quantity}">1</td>
+
+                                <td class="p-4 font-bold text-emerald-600">
+                                    $<span th:text="${#numbers.formatDecimal(b.totalAmount, 1, 2)}">0.00</span>
+                                </td>
+
+                                <td class="p-4 text-slate-500" th:text="${#temporals.format(b.bookedAt, 'dd MMM yyyy &bull; hh:mm a')}">
+                                    Date
+                                </td>
+
+                                <td class="p-4" th:id="'statusCell-' + ${b.bookingId}">
+                                    <span th:if="${b.used}" class="px-2.5 py-1 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 flex items-center space-x-1 w-fit">
+                                        <span>✓</span>
+                                        <span>Checked In</span>
+                                    </span>
+                                    <span th:if="${!b.used}" class="px-2.5 py-1 rounded-full text-[10px] font-bold bg-slate-100 text-slate-600 flex items-center space-x-1 w-fit">
+                                        <span>⏳</span>
+                                        <span>Awaiting Entry</span>
+                                    </span>
+                                </td>
+
+                                <td class="p-4 text-right" th:id="'actionCell-' + ${b.bookingId}">
+                                    <button type="button"
+                                            th:attr="onclick='toggleRowCheckIn(' + ${analytics.eventId} + ', ' + ${b.bookingId} + ')'"
+                                            th:classappend="${b.used ? 'bg-slate-100 hover:bg-slate-200 text-slate-700' : 'bg-indigo-50 hover:bg-indigo-100 text-indigo-700'}"
+                                            class="px-3 py-1.5 rounded-lg text-xs font-bold transition">
+                                        <span th:text="${b.used ? 'Undo Check-in' : 'Check In'}">Check In</span>
+                                    </button>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="border-t border-slate-200 py-6 text-center text-slate-400 text-xs">
+        QuickPass &bull; Event Organizer & Analytics Suite
+    </footer>
+
+    <!-- JavaScript for Tabs, Live Scanner, Search Filter & CSV Export -->
+    <script th:inline="javascript">
+        /*<![CDATA[*/
+        const currentEventId = /*[[${analytics.eventId}]]*/ 0;
+        const currentEventTitle = /*[[${analytics.title}]]*/ 'Event';
+        const rawBookings = /*[[${analytics.bookings}]]*/ [];
+        /*]]>*/
+
+        // Tab Switching
+        function switchTab(tabId, btnElement) {
+            document.querySelectorAll('section[id$="Tab"]').forEach(sec => sec.classList.add('hidden'));
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.classList.remove('active');
+                btn.classList.add('text-slate-600');
+            });
+
+            document.getElementById(tabId).classList.remove('hidden');
+            btnElement.classList.add('active');
+            btnElement.classList.remove('text-slate-600');
+        }
+
+        // Live Scanner Handler
+        async function handleLiveScan(e) {
+            e.preventDefault();
+            const input = document.getElementById('liveTicketInput');
+            const code = input.value.trim();
+            if (!code) return;
+
+            const btn = document.getElementById('liveScanBtn');
+            btn.disabled = true;
+            btn.textContent = 'Verifying...';
+
+            const box = document.getElementById('liveScanResultBox');
+            box.classList.remove('hidden');
+
+            try {
+                const res = await fetch(`/api/events/${currentEventId}/scan`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ ticketCode: code })
+                });
+
+                const data = await res.json();
+                input.value = '';
+                input.focus();
+
+                if (data.status === 'SUCCESS') {
+                    box.className = 'p-4 rounded-xl text-xs space-y-1 bg-emerald-50 border border-emerald-300 text-emerald-950 animate-pulse';
+                    box.innerHTML = `
+                        <div class="flex items-center space-x-2 font-black text-sm text-emerald-800">
+                            <span>✓</span>
+                            <span>Valid Pass &bull; Checked In!</span>
+                        </div>
+                        <div><strong>Attendee:</strong> ${escapeHtml(data.attendeeName)} (${escapeHtml(data.attendeeEmail)})</div>
+                        <div><strong>Pass Type:</strong> ${escapeHtml(data.passType)} &bull; <strong>Quantity:</strong> ${data.quantity} Pass(es)</div>
+                        <div class="text-[11px] text-emerald-700 font-medium pt-1">${escapeHtml(data.message)}</div>
+                    `;
+                    addLogItem(data.ticketCode, data.attendeeName, data.passType, true, 'Admitted');
+                    updateLiveAttendanceCounters(data.totalTicketsScanned, data.totalTicketsSold, data.checkInPercentage);
+                } else if (data.status === 'ALREADY_SCANNED') {
+                    box.className = 'p-4 rounded-xl text-xs space-y-1 bg-amber-50 border border-amber-300 text-amber-950';
+                    box.innerHTML = `
+                        <div class="flex items-center space-x-2 font-black text-sm text-amber-800">
+                            <span>⚠️</span>
+                            <span>Warning: Already Checked In!</span>
+                        </div>
+                        <div><strong>Attendee:</strong> ${escapeHtml(data.attendeeName || 'Unknown')}</div>
+                        <div><strong>Pass Type:</strong> ${escapeHtml(data.passType || '')}</div>
+                        <div class="text-[11px] text-amber-800 font-medium pt-1">${escapeHtml(data.message)}</div>
+                    `;
+                    addLogItem(data.ticketCode, data.attendeeName, data.passType, false, 'Duplicate Scan');
+                } else {
+                    box.className = 'p-4 rounded-xl text-xs space-y-1 bg-rose-50 border border-rose-300 text-rose-950';
+                    box.innerHTML = `
+                        <div class="flex items-center space-x-2 font-black text-sm text-rose-800">
+                            <span>✕</span>
+                            <span>Invalid Pass</span>
+                        </div>
+                        <div class="text-[11px] text-rose-700 font-medium">${escapeHtml(data.message || 'Ticket code not recognized.')}</div>
+                    `;
+                    addLogItem(code, 'Unknown', 'N/A', false, 'Invalid Code');
+                }
+            } catch (err) {
+                box.className = 'p-4 rounded-xl text-xs bg-rose-50 border border-rose-300 text-rose-900';
+                box.textContent = 'Server connection error. Please try again.';
+            } finally {
+                btn.disabled = false;
+                btn.textContent = 'Verify Pass';
+            }
+        }
+
+        function addLogItem(code, name, type, success, label) {
+            const log = document.getElementById('liveActivityLog');
+            if (log.querySelector('p')) {
+                log.innerHTML = '';
+            }
+            const item = document.createElement('div');
+            item.className = `p-2 rounded-lg flex items-center justify-between border ${success ? 'bg-emerald-50 border-emerald-100 text-emerald-900' : 'bg-amber-50 border-amber-100 text-amber-900'}`;
+            item.innerHTML = `
+                <div>
+                    <span class="font-mono font-bold">${escapeHtml(code)}</span> &bull; 
+                    <span>${escapeHtml(name)}</span>
+                </div>
+                <span class="text-[10px] font-extrabold uppercase">${label}</span>
+            `;
+            log.prepend(item);
+        }
+
+        function updateLiveAttendanceCounters(scanned, totalSold, rate) {
+            document.getElementById('topScannedDisplay').textContent = scanned;
+            document.getElementById('tabScannedDisplay').textContent = scanned;
+            document.getElementById('liveTotalAdmitted').textContent = scanned;
+            document.getElementById('livePendingArrival').textContent = Math.max(0, totalSold - scanned);
+            document.getElementById('topAttendanceRateDisplay').textContent = rate.toFixed(1);
+            document.getElementById('tabCheckInPercentDisplay').textContent = rate.toFixed(1);
+            document.getElementById('entryProgressBar').style.width = rate + '%';
+        }
+
+        // Toggle Row Check In in Manifest Table
+        async function toggleRowCheckIn(eventId, bookingId) {
+            try {
+                const res = await fetch(`/api/events/${eventId}/bookings/${bookingId}/toggle-scan`, { method: 'POST' });
+                if (!res.ok) throw new Error('Toggle failed');
+                const data = await res.json();
+                
+                // Update table cell
+                const statusCell = document.getElementById(`statusCell-${bookingId}`);
+                const actionCell = document.getElementById(`actionCell-${bookingId}`);
+
+                if (data.isUsed) {
+                    statusCell.innerHTML = `
+                        <span class="px-2.5 py-1 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 flex items-center space-x-1 w-fit">
+                            <span>✓</span>
+                            <span>Checked In</span>
+                        </span>
+                    `;
+                    actionCell.innerHTML = `
+                        <button type="button" onclick="toggleRowCheckIn(${eventId}, ${bookingId})"
+                                class="px-3 py-1.5 rounded-lg text-xs font-bold transition bg-slate-100 hover:bg-slate-200 text-slate-700">
+                            Undo Check-in
+                        </button>
+                    `;
+                } else {
+                    statusCell.innerHTML = `
+                        <span class="px-2.5 py-1 rounded-full text-[10px] font-bold bg-slate-100 text-slate-600 flex items-center space-x-1 w-fit">
+                            <span>⏳</span>
+                            <span>Awaiting Entry</span>
+                        </span>
+                    `;
+                    actionCell.innerHTML = `
+                        <button type="button" onclick="toggleRowCheckIn(${eventId}, ${bookingId})"
+                                class="px-3 py-1.5 rounded-lg text-xs font-bold transition bg-indigo-50 hover:bg-indigo-100 text-indigo-700">
+                            Check In
+                        </button>
+                    `;
+                }
+            } catch (err) {
+                alert('Could not update status: ' + err.message);
+            }
+        }
+
+        // Search Filter for Manifest Table
+        function filterAttendeeRows() {
+            const query = document.getElementById('attendeeSearchInput').value.toLowerCase().trim();
+            document.querySelectorAll('.attendee-row').forEach(row => {
+                const text = row.getAttribute('data-search') || '';
+                row.style.display = text.includes(query) ? '' : 'none';
+            });
+        }
+
+        // Export Guest List as CSV
+        function exportGuestListCsv() {
+            if (!rawBookings || rawBookings.length === 0) {
+                alert('No attendees booked yet for this event to export.');
+                return;
+            }
+
+            let csv = 'Ticket Code,Attendee Name,Email,Pass Tier,Quantity,Amount Paid,Checked In Status,Booked Date\n';
+            rawBookings.forEach(b => {
+                const status = b.isUsed ? 'Checked In' : 'Not Checked In';
+                const date = b.bookedAt ? b.bookedAt.replace('T', ' ') : '';
+                csv += `"${b.ticketCode}","${b.attendeeName}","${b.attendeeEmail}","${b.passType}",${b.quantity},${b.totalAmount},"${status}","${date}"\n`;
+            });
+
+            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.setAttribute('href', url);
+            link.setAttribute('download', `${currentEventTitle.replace(/[^a-z0-9]/gi, '_')}_Attendees.csv`);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+
+        function escapeHtml(str) {
+            if (!str) return '';
+            return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+        }
+
+        async function logoutUser() {
+            try {
+                localStorage.removeItem('quickpass_token');
+                await fetch('/api/auth/logout', { method: 'POST' });
+            } catch (err) {
+                console.error(err);
+            } finally {
+                window.location.href = '/login?logout';
+            }
+        }
+    </script>
+</body>
+</html>
+

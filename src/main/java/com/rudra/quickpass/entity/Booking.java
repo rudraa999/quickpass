@@ -42,6 +42,8 @@ public class Booking {
 
     private boolean isUsed = false;
 
+    private LocalDateTime scannedAt;
+
     private LocalDateTime bookedAt;
 
     public Booking() {
@@ -131,6 +133,14 @@ public class Booking {
 
     public void setUsed(boolean used) {
         isUsed = used;
+    }
+
+    public LocalDateTime getScannedAt() {
+        return scannedAt;
+    }
+
+    public void setScannedAt(LocalDateTime scannedAt) {
+        this.scannedAt = scannedAt;
     }
 
     public LocalDateTime getBookedAt() {

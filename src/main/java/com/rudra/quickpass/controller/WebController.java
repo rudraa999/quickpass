@@ -1,20 +1,24 @@
 package com.rudra.quickpass.controller;
 
+import com.rudra.quickpass.dto.EventAnalyticsDto;
 import com.rudra.quickpass.entity.Booking;
 import com.rudra.quickpass.entity.Event;
 import com.rudra.quickpass.entity.Role;
 import com.rudra.quickpass.security.CustomUserDetails;
 import com.rudra.quickpass.service.BookingService;
+import com.rudra.quickpass.service.EventAnalyticsService;
 import com.rudra.quickpass.service.EventService;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.authentication.AnonymousAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestParam;
 
 import java.util.List;
@@ -24,13 +28,17 @@ public class WebController {
 
     private final EventService eventService;
     private final BookingService bookingService;
+    private final EventAnalyticsService eventAnalyticsService;
 
     @Value("${quickpass.jwt.cookie-name:quickpass_token}")
     private String cookieName;
 
-    public WebController(EventService eventService, BookingService bookingService) {
+    public WebController(EventService eventService,
+                         BookingService bookingService,
+                         EventAnalyticsService eventAnalyticsService) {
         this.eventService = eventService;
         this.bookingService = bookingService;
+        this.eventAnalyticsService = eventAnalyticsService;
     }
 
     private boolean isAuthenticated() {
@@ -116,6 +124,26 @@ public class WebController {
         List<Event> myEvents = eventService.getOrganizerEvents(user.getId());
         model.addAttribute("myEvents", myEvents);
         return "organizer";
+    }
+
+    @GetMapping("/organizer/events/{id}")
+    public String organizerEventDashboard(@PathVariable Long id, Model model) {
+        CustomUserDetails user = getCurrentUserDetails();
+        if (user == null) {
+            return "redirect:/login";
+        }
+        populateUserHeader(model, user);
+
+        boolean isAdmin = Role.ROLE_ADMIN.name().equals(user.getRole());
+        try {
+            EventAnalyticsDto analytics = eventAnalyticsService.getEventAnalytics(id, user.getId(), isAdmin);
+            model.addAttribute("analytics", analytics);
+            return "event-dashboard";
+        } catch (AccessDeniedException ex) {
+            return "redirect:/organizer?error=unauthorized";
+        } catch (IllegalArgumentException ex) {
+            return "redirect:/organizer?error=notfound";
+        }
     }
 
     @GetMapping("/organizer/create-event")

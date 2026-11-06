@@ -2,12 +2,16 @@ package com.rudra.quickpass.controller;
 
 import com.rudra.quickpass.dto.BookPassRequest;
 import com.rudra.quickpass.dto.CreateEventRequest;
+import com.rudra.quickpass.dto.EventAnalyticsDto;
+import com.rudra.quickpass.dto.ScanTicketRequest;
+import com.rudra.quickpass.dto.ScanTicketResponse;
 import com.rudra.quickpass.entity.Booking;
 import com.rudra.quickpass.entity.Event;
 import com.rudra.quickpass.entity.Role;
 import com.rudra.quickpass.entity.User;
 import com.rudra.quickpass.security.CustomUserDetails;
 import com.rudra.quickpass.service.BookingService;
+import com.rudra.quickpass.service.EventAnalyticsService;
 import com.rudra.quickpass.service.EventService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
@@ -24,10 +28,14 @@ public class EventApiController {
 
     private final EventService eventService;
     private final BookingService bookingService;
+    private final EventAnalyticsService eventAnalyticsService;
 
-    public EventApiController(EventService eventService, BookingService bookingService) {
+    public EventApiController(EventService eventService,
+                              BookingService bookingService,
+                              EventAnalyticsService eventAnalyticsService) {
         this.eventService = eventService;
         this.bookingService = bookingService;
+        this.eventAnalyticsService = eventAnalyticsService;
     }
 
     @PostMapping
@@ -97,6 +105,54 @@ public class EventApiController {
         eventService.rejectEvent(id);
         Map<String, String> response = new HashMap<>();
         response.put("message", "Event has been rejected.");
+        return ResponseEntity.ok(response);
+    }
+
+    @GetMapping("/{id}/analytics")
+    public ResponseEntity<EventAnalyticsDto> getEventAnalytics(
+            @PathVariable Long id,
+            @AuthenticationPrincipal CustomUserDetails userDetails
+    ) {
+        if (userDetails == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+        boolean isAdmin = Role.ROLE_ADMIN.name().equals(userDetails.getRole());
+        EventAnalyticsDto analytics = eventAnalyticsService.getEventAnalytics(id, userDetails.getId(), isAdmin);
+        return ResponseEntity.ok(analytics);
+    }
+
+    @PostMapping("/{id}/scan")
+    public ResponseEntity<ScanTicketResponse> scanTicket(
+            @PathVariable Long id,
+            @Valid @RequestBody ScanTicketRequest request,
+            @AuthenticationPrincipal CustomUserDetails userDetails
+    ) {
+        if (userDetails == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+        boolean isAdmin = Role.ROLE_ADMIN.name().equals(userDetails.getRole());
+        ScanTicketResponse response = eventAnalyticsService.scanTicketForEvent(
+                id, request.getTicketCode(), userDetails.getId(), isAdmin
+        );
+        return ResponseEntity.ok(response);
+    }
+
+    @PostMapping("/{id}/bookings/{bookingId}/toggle-scan")
+    public ResponseEntity<Map<String, Object>> toggleBookingScan(
+            @PathVariable Long id,
+            @PathVariable Long bookingId,
+            @AuthenticationPrincipal CustomUserDetails userDetails
+    ) {
+        if (userDetails == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+        boolean isAdmin = Role.ROLE_ADMIN.name().equals(userDetails.getRole());
+        boolean isNowUsed = eventAnalyticsService.toggleBookingCheckIn(id, bookingId, userDetails.getId(), isAdmin);
+
+        Map<String, Object> response = new HashMap<>();
+        response.put("bookingId", bookingId);
+        response.put("isUsed", isNowUsed);
+        response.put("message", isNowUsed ? "Attendee checked in successfully" : "Attendee check-in revoked");
         return ResponseEntity.ok(response);
     }
 }
