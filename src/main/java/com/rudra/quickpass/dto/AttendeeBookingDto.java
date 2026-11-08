@@ -1,5 +1,6 @@
 package com.rudra.quickpass.dto;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
 import com.rudra.quickpass.entity.PassType;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -14,15 +15,19 @@ public class AttendeeBookingDto {
     private BigDecimal unitPrice;
     private BigDecimal totalAmount;
     private boolean isUsed;
+
+    @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss")
     private LocalDateTime scannedAt;
+
+    @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss")
     private LocalDateTime bookedAt;
 
     public AttendeeBookingDto() {
     }
 
     public AttendeeBookingDto(Long bookingId, String ticketCode, String attendeeName, String attendeeEmail,
-                              PassType passType, int quantity, BigDecimal unitPrice, BigDecimal totalAmount,
-                              boolean isUsed, LocalDateTime scannedAt, LocalDateTime bookedAt) {
+            PassType passType, int quantity, BigDecimal unitPrice, BigDecimal totalAmount,
+            boolean isUsed, LocalDateTime scannedAt, LocalDateTime bookedAt) {
         this.bookingId = bookingId;
         this.ticketCode = ticketCode;
         this.attendeeName = attendeeName;
@@ -124,4 +129,3 @@ public class AttendeeBookingDto {
         this.bookedAt = bookedAt;
     }
 }
-

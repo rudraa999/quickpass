@@ -3,12 +3,17 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>QuickPass - Admin Event Approval Panel</title>
+    <title>QuickPass &bull; Master Admin Console</title>
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <style>
         body { font-family: 'Plus Jakarta Sans', sans-serif; }
+        .tab-btn.active {
+            background-color: #4f46e5;
+            color: #ffffff;
+            box-shadow: 0 4px 12px -2px rgba(79, 70, 229, 0.35);
+        }
     </style>
 </head>
 <body class="bg-slate-50 text-slate-800 min-h-screen flex flex-col antialiased selection:bg-indigo-100 selection:text-indigo-700">
@@ -43,11 +48,12 @@
                             Organizer
                         </a>
                         <a th:href="@{/admin/events}"
-                           class="px-3.5 py-2 rounded-xl text-sm font-bold bg-purple-50 text-purple-700 transition flex items-center space-x-1 border border-purple-200">
-                            <span class="w-2 h-2 rounded-full bg-purple-600"></span>
-                            <span>Admin Approval</span>
-                            <span class="ml-1 px-1.5 py-0.5 rounded-full text-[10px] bg-purple-200 text-purple-800 font-extrabold"
-                                  th:text="${pendingEvents.size()}">0</span>
+                           class="px-3.5 py-2 rounded-xl text-sm font-bold bg-purple-100 text-purple-800 transition flex items-center space-x-1.5 border border-purple-200 shadow-sm">
+                            <span class="w-2 h-2 rounded-full bg-purple-600 animate-ping"></span>
+                            <span>Admin Portal</span>
+                            <span th:if="${stats.pendingEventsCount > 0}"
+                                  class="ml-1 px-1.5 py-0.5 rounded-full text-[10px] bg-purple-200 text-purple-900 font-extrabold"
+                                  th:text="${stats.pendingEventsCount}">0</span>
                         </a>
                     </div>
                 </div>
@@ -57,11 +63,11 @@
                     <a th:href="@{/account}"
                        class="flex items-center space-x-2 px-3 py-1.5 rounded-xl hover:bg-slate-100 transition border border-transparent hover:border-slate-200">
                         <div class="w-8 h-8 rounded-lg bg-indigo-100 text-indigo-700 font-bold flex items-center justify-center text-xs">
-                            <span th:text="${fullName != null ? fullName.substring(0, 1) : 'U'}">U</span>
+                            <span th:text="${fullName != null ? fullName.substring(0, 1) : 'A'}">A</span>
                         </div>
                         <div class="hidden sm:flex flex-col text-left">
-                            <span class="text-xs font-bold text-slate-800" th:text="${fullName}">User Name</span>
-                            <span class="text-[10px] text-slate-400 font-medium">Account</span>
+                            <span class="text-xs font-bold text-slate-800" th:text="${fullName}">Main Admin</span>
+                            <span class="text-[10px] text-purple-600 font-bold">Admin Account</span>
                         </div>
                     </a>
 
@@ -78,167 +84,1090 @@
     </nav>
 
     <!-- Main Container -->
-    <main class="flex-grow max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-10 w-full">
-        <!-- Banner -->
-        <div class="bg-gradient-to-r from-purple-800 to-indigo-800 text-white p-6 sm:p-8 rounded-2xl shadow-lg mb-8">
-            <div class="flex items-center justify-between">
-                <div>
-                    <span class="inline-block px-3 py-1 bg-white/20 backdrop-blur-md rounded-full text-xs font-bold tracking-wide uppercase mb-2">
-                        Main Admin Portal
-                    </span>
-                    <h1 class="text-2xl sm:text-3xl font-extrabold tracking-tight">Pending Event Approval Requests</h1>
-                    <p class="text-purple-100 text-sm mt-1">Review organizer submissions. Once approved, the event will instantly appear on the public QuickPass dashboard.</p>
+    <main class="flex-grow max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 w-full space-y-6">
+
+        <!-- Enterprise Hero Banner -->
+        <div class="bg-gradient-to-r from-slate-900 via-indigo-950 to-purple-950 text-white p-6 sm:p-8 rounded-3xl shadow-xl relative overflow-hidden border border-slate-800">
+            <!-- Ambient glowing orbs -->
+            <div class="absolute -top-16 -right-16 w-64 h-64 bg-indigo-500/20 rounded-full blur-3xl pointer-events-none"></div>
+            <div class="absolute -bottom-16 -left-16 w-64 h-64 bg-purple-500/20 rounded-full blur-3xl pointer-events-none"></div>
+
+            <div class="relative z-10 flex flex-col md:flex-row md:items-center md:justify-between gap-6">
+                <div class="space-y-2">
+                    <div class="flex items-center space-x-2">
+                        <span class="px-3 py-1 bg-white/10 backdrop-blur-md rounded-full text-[11px] font-extrabold tracking-wider uppercase text-purple-200 border border-white/10">
+                            Enterprise Control Center
+                        </span>
+                        <span class="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 flex items-center space-x-1">
+                            <span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
+                            <span>System Healthy</span>
+                        </span>
+                    </div>
+                    <h1 class="text-2xl sm:text-3xl font-black tracking-tight text-white">
+                        Platform Master Operations & Governance
+                    </h1>
+                    <p class="text-slate-300 text-xs sm:text-sm max-w-2xl leading-relaxed">
+                        Comprehensive administrative oversight: event approval lifecycle, catalog moderation, user privilege governance, and global transaction auditing.
+                    </p>
+                </div>
+
+                <!-- Quick Stats Badge Pills -->
+                <div class="flex flex-wrap md:flex-col gap-2 shrink-0 text-xs">
+                    <div class="bg-white/10 backdrop-blur-md px-4 py-2 rounded-xl border border-white/10 flex items-center justify-between space-x-4">
+                        <span class="text-slate-300">Pending Approvals:</span>
+                        <strong class="font-extrabold text-amber-300 text-sm" th:text="${stats.pendingEventsCount}">0</strong>
+                    </div>
+                    <div class="bg-white/10 backdrop-blur-md px-4 py-2 rounded-xl border border-white/10 flex items-center justify-between space-x-4">
+                        <span class="text-slate-300">Platform GMV:</span>
+                        <strong class="font-extrabold text-emerald-300 text-sm">$<span th:text="${#numbers.formatDecimal(stats.totalGrossRevenue, 1, 2)}">0.00</span></strong>
+                    </div>
                 </div>
             </div>
         </div>
 
-        <div id="actionAlert" class="hidden mb-6 p-4 rounded-xl text-sm font-medium"></div>
+        <!-- Global Alert Notification Banner -->
+        <div id="adminActionAlert" class="hidden p-4 rounded-2xl text-sm font-semibold transition flex items-center justify-between shadow-sm">
+            <span id="adminActionAlertText">Message here</span>
+            <button type="button" onclick="document.getElementById('adminActionAlert').classList.add('hidden')" class="text-xs font-bold underline opacity-75 hover:opacity-100">
+                Dismiss
+            </button>
+        </div>
 
-        <!-- Empty State -->
-        <div th:if="${pendingEvents == null || pendingEvents.isEmpty()}" class="bg-white rounded-2xl border border-slate-200 p-12 text-center shadow-sm">
-            <div class="w-14 h-14 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center mx-auto mb-3">
-                <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+        <!-- Master Admin Tabs Bar -->
+        <div class="bg-white rounded-2xl p-2 border border-slate-200/90 shadow-sm flex flex-wrap gap-2">
+            <button type="button" onclick="switchAdminTab('overviewTab', this)"
+                    class="tab-btn active px-4 py-2.5 rounded-xl text-xs font-bold transition flex items-center space-x-2">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
                 </svg>
-            </div>
-            <h3 class="text-lg font-bold text-slate-800">No pending approval requests</h3>
-            <p class="text-slate-500 text-sm mt-1">All submitted events have been reviewed.</p>
+                <span>Executive Overview</span>
+            </button>
+
+            <button type="button" onclick="switchAdminTab('pendingTab', this)"
+                    class="tab-btn px-4 py-2.5 rounded-xl text-xs font-bold text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition flex items-center space-x-2">
+                <svg class="w-4 h-4 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                </svg>
+                <span>Pending Approvals</span>
+                <span th:if="${stats.pendingEventsCount > 0}"
+                      class="px-2 py-0.5 rounded-full text-[10px] bg-amber-100 text-amber-800 font-extrabold"
+                      th:text="${stats.pendingEventsCount}">0</span>
+            </button>
+
+            <button type="button" onclick="switchAdminTab('moderationTab', this)"
+                    class="tab-btn px-4 py-2.5 rounded-xl text-xs font-bold text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition flex items-center space-x-2">
+                <svg class="w-4 h-4 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/>
+                </svg>
+                <span>Event Catalog Moderation</span>
+                <span class="px-2 py-0.5 rounded-full text-[10px] bg-slate-100 text-slate-700 font-extrabold"
+                      th:text="${stats.totalEvents}">0</span>
+            </button>
+
+            <button type="button" onclick="switchAdminTab('usersTab', this)"
+                    class="tab-btn px-4 py-2.5 rounded-xl text-xs font-bold text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition flex items-center space-x-2">
+                <svg class="w-4 h-4 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/>
+                </svg>
+                <span>User & Organizer Directory</span>
+                <span class="px-2 py-0.5 rounded-full text-[10px] bg-slate-100 text-slate-700 font-extrabold"
+                      th:text="${stats.totalUsers}">0</span>
+            </button>
+
+            <button type="button" onclick="switchAdminTab('bookingsTab', this)"
+                    class="tab-btn px-4 py-2.5 rounded-xl text-xs font-bold text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition flex items-center space-x-2">
+                <svg class="w-4 h-4 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                </svg>
+                <span>Global Bookings & Audit</span>
+                <span class="px-2 py-0.5 rounded-full text-[10px] bg-slate-100 text-slate-700 font-extrabold"
+                      th:text="${stats.totalBookingsCount}">0</span>
+            </button>
         </div>
 
-        <!-- Pending Events List -->
-        <div th:if="${pendingEvents != null && !pendingEvents.isEmpty()}" class="space-y-6">
-            <div th:each="event : ${pendingEvents}" th:id="'eventCard-' + ${event.id}"
-                 class="bg-white rounded-2xl border border-slate-200/90 p-6 sm:p-8 shadow-sm">
-                
-                <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
-                    <div class="space-y-3 flex-1">
-                        <!-- Category and Organizer info -->
-                        <div class="flex items-center space-x-3 text-xs">
-                            <span class="px-2.5 py-1 rounded-lg bg-indigo-50 text-indigo-700 font-bold uppercase tracking-wider"
-                                  th:text="${event.category}">
-                                Category
-                            </span>
-                            <span class="text-slate-500 font-medium">
-                                Organizer: <strong class="text-slate-800" th:text="${event.organizer != null ? event.organizer.fullName : 'Organizer'}">Organizer</strong> 
-                                (<span th:text="${event.organizer != null ? event.organizer.email : ''}">email</span>)
-                            </span>
+        <!-- ==================== TAB 1: EXECUTIVE OVERVIEW ==================== -->
+        <section id="overviewTab" class="space-y-6">
+            <!-- 4 Top KPI Cards -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                <!-- KPI 1: Gross Platform Revenue -->
+                <div class="bg-white rounded-2xl p-5 border border-slate-200/90 shadow-sm flex items-center space-x-4">
+                    <div class="w-12 h-12 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                        </svg>
+                    </div>
+                    <div>
+                        <span class="text-xs font-semibold text-slate-500 uppercase tracking-wider block">Platform Gross GMV</span>
+                        <span class="text-2xl font-black text-slate-900">
+                            $<span th:text="${#numbers.formatDecimal(stats.totalGrossRevenue, 1, 2)}">0.00</span>
+                        </span>
+                        <span class="text-[11px] text-emerald-600 font-bold block">
+                            Across <span th:text="${stats.totalBookingsCount}">0</span> orders
+                        </span>
+                    </div>
+                </div>
+
+                <!-- KPI 2: Total Passes Issued -->
+                <div class="bg-white rounded-2xl p-5 border border-slate-200/90 shadow-sm flex items-center space-x-4">
+                    <div class="w-12 h-12 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center shrink-0">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z"/>
+                        </svg>
+                    </div>
+                    <div>
+                        <span class="text-xs font-semibold text-slate-500 uppercase tracking-wider block">Passes Issued</span>
+                        <span class="text-2xl font-black text-slate-900" th:text="${stats.totalTicketsSold}">0</span>
+                        <span class="text-[11px] text-indigo-600 font-bold block">
+                            Live across platform
+                        </span>
+                    </div>
+                </div>
+
+                <!-- KPI 3: Total Events Managed -->
+                <div class="bg-white rounded-2xl p-5 border border-slate-200/90 shadow-sm flex items-center space-x-4">
+                    <div class="w-12 h-12 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center shrink-0">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/>
+                        </svg>
+                    </div>
+                    <div>
+                        <span class="text-xs font-semibold text-slate-500 uppercase tracking-wider block">Total Hosted Events</span>
+                        <span class="text-2xl font-black text-purple-700" th:text="${stats.totalEvents}">0</span>
+                        <span class="text-[11px] text-slate-500 font-medium block">
+                            <span class="text-emerald-600 font-bold" th:text="${stats.approvedEventsCount}">0</span> Live &bull; 
+                            <span class="text-amber-600 font-bold" th:text="${stats.pendingEventsCount}">0</span> Pending
+                        </span>
+                    </div>
+                </div>
+
+                <!-- KPI 4: Registered Users & Organizers -->
+                <div class="bg-white rounded-2xl p-5 border border-slate-200/90 shadow-sm flex items-center space-x-4">
+                    <div class="w-12 h-12 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center shrink-0">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/>
+                        </svg>
+                    </div>
+                    <div>
+                        <span class="text-xs font-semibold text-slate-500 uppercase tracking-wider block">Registered Users</span>
+                        <span class="text-2xl font-black text-slate-900" th:text="${stats.totalUsers}">0</span>
+                        <span class="text-[11px] text-amber-700 font-bold block">
+                            <span th:text="${stats.organizersCount}">0</span> Organizers &bull; <span th:text="${stats.attendeesCount}">0</span> Attendees
+                        </span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Global Attendance & Venue Gate Velocity -->
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <!-- Progress & Attendance Rate -->
+                <div class="lg:col-span-2 bg-white rounded-2xl p-6 border border-slate-200/90 shadow-sm space-y-4">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <h3 class="text-base font-extrabold text-slate-900">Global Venue Gate Check-In Velocity</h3>
+                            <p class="text-xs text-slate-500">Real-time attendance conversion across all live events</p>
                         </div>
-
-                        <!-- Title -->
-                        <h3 class="text-2xl font-extrabold text-slate-900 tracking-tight" th:text="${event.title}">
-                            Event Name
-                        </h3>
-
-                        <!-- Description -->
-                        <p class="text-slate-600 text-sm leading-relaxed" th:text="${event.description}">
-                            Description
-                        </p>
-
-                        <!-- Logistics -->
-                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs text-slate-600 bg-slate-50 p-3.5 rounded-xl border border-slate-100">
-                            <div>
-                                <strong>Venue:</strong> <span th:text="${event.venue}">Venue location</span>
-                            </div>
-                            <div>
-                                <strong>Event Date:</strong> <span th:text="${#temporals.format(event.eventDateTime, 'dd MMM yyyy, hh:mm a')}">Date</span>
-                            </div>
-                            <div>
-                                <strong>Booking Opens:</strong> <span th:text="${#temporals.format(event.bookingStartDate, 'dd MMM yyyy, hh:mm a')}">Start</span>
-                            </div>
-                            <div>
-                                <strong>Booking Closes:</strong> <span th:text="${#temporals.format(event.bookingEndDate, 'dd MMM yyyy, hh:mm a')}">End</span>
-                            </div>
-                        </div>
-
-                        <!-- Pass Tiers Pricing & Capacity -->
-                        <div class="flex flex-wrap gap-4 pt-1 text-xs">
-                            <div class="px-3 py-1.5 rounded-lg bg-slate-100 border border-slate-200 font-medium">
-                                Normal: <strong>$<span th:text="${event.normalPrice}">40</span></strong> (<span th:text="${event.normalCapacity}">100</span> passes)
-                            </div>
-                            <div class="px-3 py-1.5 rounded-lg bg-indigo-50 border border-indigo-200 text-indigo-800 font-medium">
-                                VIP: <strong>$<span th:text="${event.vipPrice}">99</span></strong> (<span th:text="${event.vipCapacity}">40</span> passes)
-                            </div>
-                            <div class="px-3 py-1.5 rounded-lg bg-purple-50 border border-purple-200 text-purple-800 font-medium">
-                                VVIP: <strong>$<span th:text="${event.vvipPrice}">199</span></strong> (<span th:text="${event.vvipCapacity}">15</span> passes)
-                            </div>
-                        </div>
+                        <span class="text-lg font-black text-indigo-600">
+                            <span th:text="${stats.globalAttendanceRate}">0.0</span>% Checked-In
+                        </span>
                     </div>
 
-                    <!-- Action Buttons -->
-                    <div class="flex lg:flex-col gap-3 shrink-0">
-                        <button type="button"
-                                th:attr="onclick='approveEvent(' + ${event.id} + ')'"
-                                class="flex-1 lg:flex-initial px-5 py-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 active:scale-[0.98] text-white font-bold text-sm shadow-md shadow-emerald-100 transition flex items-center justify-center space-x-1.5">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
-                            </svg>
-                            <span>Approve Event</span>
+                    <!-- Progress bar -->
+                    <div class="w-full bg-slate-100 rounded-full h-3 overflow-hidden">
+                        <div class="bg-indigo-600 h-3 rounded-full transition-all duration-500"
+                             th:style="'width: ' + ${stats.globalAttendanceRate} + '%'"></div>
+                    </div>
+
+                    <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-2 text-xs">
+                        <div class="p-3 rounded-xl bg-slate-50 border border-slate-100">
+                            <span class="text-slate-400 block text-[10px] uppercase font-bold">Total Scanned</span>
+                            <span class="text-base font-extrabold text-emerald-600" th:text="${stats.totalScannedPasses}">0</span>
+                        </div>
+                        <div class="p-3 rounded-xl bg-slate-50 border border-slate-100">
+                            <span class="text-slate-400 block text-[10px] uppercase font-bold">Pending Entry</span>
+                            <span class="text-base font-extrabold text-amber-600" th:text="${stats.totalTicketsSold - stats.totalScannedPasses}">0</span>
+                        </div>
+                        <div class="p-3 rounded-xl bg-slate-50 border border-slate-100">
+                            <span class="text-slate-400 block text-[10px] uppercase font-bold">Live Events</span>
+                            <span class="text-base font-extrabold text-indigo-600" th:text="${stats.approvedEventsCount}">0</span>
+                        </div>
+                        <div class="p-3 rounded-xl bg-slate-50 border border-slate-100">
+                            <span class="text-slate-400 block text-[10px] uppercase font-bold">Active Organizers</span>
+                            <span class="text-base font-extrabold text-purple-600" th:text="${stats.organizersCount}">0</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Admin Action Quick Launchpad -->
+                <div class="bg-white rounded-2xl p-6 border border-slate-200/90 shadow-sm space-y-4">
+                    <h3 class="text-base font-extrabold text-slate-900">Admin Action Center</h3>
+                    <p class="text-xs text-slate-500">Quick shortcuts to administrative workflows</p>
+
+                    <div class="space-y-2.5">
+                        <button type="button" onclick="switchAdminTab('pendingTab', document.querySelectorAll('.tab-btn')[1])"
+                                class="w-full p-3 rounded-xl bg-amber-50 hover:bg-amber-100 border border-amber-200 text-amber-900 text-xs font-bold transition flex items-center justify-between">
+                            <span class="flex items-center space-x-2">
+                                <span>⏳</span>
+                                <span>Review Pending Submissions</span>
+                            </span>
+                            <span class="px-2 py-0.5 rounded-full bg-amber-200 text-amber-900 font-extrabold" th:text="${stats.pendingEventsCount}">0</span>
                         </button>
 
-                        <button type="button"
-                                th:attr="onclick='rejectEvent(' + ${event.id} + ')'"
-                                class="flex-1 lg:flex-initial px-5 py-3 rounded-xl bg-slate-100 hover:bg-rose-50 text-slate-700 hover:text-rose-700 active:scale-[0.98] font-bold text-sm border border-slate-200 transition flex items-center justify-center space-x-1.5">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
-                            </svg>
-                            <span>Reject</span>
+                        <button type="button" onclick="switchAdminTab('moderationTab', document.querySelectorAll('.tab-btn')[2])"
+                                class="w-full p-3 rounded-xl bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 text-indigo-900 text-xs font-bold transition flex items-center justify-between">
+                            <span class="flex items-center space-x-2">
+                                <span>🎟️</span>
+                                <span>Moderate Event Catalog</span>
+                            </span>
+                            <span class="text-indigo-600">&rarr;</span>
+                        </button>
+
+                        <button type="button" onclick="switchAdminTab('usersTab', document.querySelectorAll('.tab-btn')[3])"
+                                class="w-full p-3 rounded-xl bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 text-emerald-900 text-xs font-bold transition flex items-center justify-between">
+                            <span class="flex items-center space-x-2">
+                                <span>👥</span>
+                                <span>Manage User Permissions</span>
+                            </span>
+                            <span class="text-emerald-600">&rarr;</span>
+                        </button>
+
+                        <button type="button" onclick="exportAdminBookingsCsv()"
+                                class="w-full p-3 rounded-xl bg-purple-50 hover:bg-purple-100 border border-purple-200 text-purple-900 text-xs font-bold transition flex items-center justify-between">
+                            <span class="flex items-center space-x-2">
+                                <span>📥</span>
+                                <span>Export Financial Ledger (CSV)</span>
+                            </span>
+                            <span class="text-purple-600">CSV</span>
                         </button>
                     </div>
                 </div>
             </div>
-        </div>
+        </section>
+
+        <!-- ==================== TAB 2: PENDING APPROVALS ==================== -->
+        <section id="pendingTab" class="hidden space-y-6">
+            <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                <div>
+                    <h2 class="text-xl font-extrabold text-slate-900">Pending Event Review Queue</h2>
+                    <p class="text-xs text-slate-500">Carefully review event specifications before admitting them to the public store.</p>
+                </div>
+                <div class="flex items-center space-x-2 text-xs font-semibold text-slate-600">
+                    <span>Queue count:</span>
+                    <span id="pendingQueueBadge" class="px-2.5 py-1 rounded-full bg-amber-100 text-amber-800 font-extrabold"
+                          th:text="${pendingEvents.size()}">0</span>
+                </div>
+            </div>
+
+            <!-- Empty State for Pending Queue -->
+            <div id="pendingEmptyState" th:classappend="${pendingEvents != null && !pendingEvents.isEmpty() ? 'hidden' : ''}"
+                 class="bg-white rounded-2xl border border-slate-200 p-12 text-center shadow-sm">
+                <div class="w-14 h-14 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center mx-auto mb-3">
+                    <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                    </svg>
+                </div>
+                <h3 class="text-lg font-bold text-slate-800">All caught up!</h3>
+                <p class="text-slate-500 text-sm mt-1">There are no pending event requests awaiting admin approval right now.</p>
+            </div>
+
+            <!-- Pending Events Cards -->
+            <div id="pendingCardsContainer" th:if="${pendingEvents != null && !pendingEvents.isEmpty()}" class="space-y-4">
+                <div th:each="event : ${pendingEvents}" th:id="'pendingCard-' + ${event.id}"
+                     class="bg-white rounded-2xl border border-slate-200/90 p-6 shadow-sm hover:border-slate-300 transition">
+                    <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
+                        <div class="space-y-3 flex-1">
+                            <div class="flex items-center space-x-3 text-xs">
+                                <span class="px-2.5 py-1 rounded-lg bg-indigo-50 text-indigo-700 font-bold uppercase tracking-wider"
+                                      th:text="${event.category}">
+                                    Category
+                                </span>
+                                <span class="text-slate-500 font-medium">
+                                    Organizer: <strong class="text-slate-800" th:text="${event.organizer != null ? event.organizer.fullName : 'Organizer'}">Organizer</strong>
+                                    (<span th:text="${event.organizer != null ? event.organizer.email : ''}">email</span>)
+                                </span>
+                                <span class="text-slate-400">&bull;</span>
+                                <span class="text-slate-500">
+                                    Submitted: <span th:text="${#temporals.format(event.createdAt, 'dd MMM yyyy')}">Date</span>
+                                </span>
+                            </div>
+
+                            <h3 class="text-xl font-extrabold text-slate-900 tracking-tight" th:text="${event.title}">Event Title</h3>
+                            <p class="text-slate-600 text-xs sm:text-sm leading-relaxed" th:text="${event.description}">Event Description</p>
+
+                            <!-- Logistics Bar -->
+                            <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-2 text-xs bg-slate-50 p-3 rounded-xl border border-slate-100">
+                                <div><strong>Venue:</strong> <span th:text="${event.venue}">Location</span></div>
+                                <div><strong>Event Date:</strong> <span th:text="${#temporals.format(event.eventDateTime, 'dd MMM yyyy, hh:mm a')}">Date</span></div>
+                                <div><strong>Opens:</strong> <span th:text="${#temporals.format(event.bookingStartDate, 'dd MMM yyyy')}">Start</span></div>
+                                <div><strong>Closes:</strong> <span th:text="${#temporals.format(event.bookingEndDate, 'dd MMM yyyy')}">End</span></div>
+                            </div>
+
+                            <!-- Pass Tiers Pricing & Capacity -->
+                            <div class="flex flex-wrap gap-3 pt-1 text-xs">
+                                <div class="px-3 py-1.5 rounded-lg bg-slate-100 border border-slate-200 font-medium">
+                                    Normal: <strong>$<span th:text="${event.normalPrice}">40</span></strong> (<span th:text="${event.normalCapacity}">100</span> passes)
+                                </div>
+                                <div class="px-3 py-1.5 rounded-lg bg-indigo-50 border border-indigo-200 text-indigo-800 font-medium">
+                                    VIP: <strong>$<span th:text="${event.vipPrice}">99</span></strong> (<span th:text="${event.vipCapacity}">40</span> passes)
+                                </div>
+                                <div class="px-3 py-1.5 rounded-lg bg-purple-50 border border-purple-200 text-purple-800 font-medium">
+                                    VVIP: <strong>$<span th:text="${event.vvipPrice}">199</span></strong> (<span th:text="${event.vvipCapacity}">15</span> passes)
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Actions -->
+                        <div class="flex lg:flex-col gap-2.5 shrink-0">
+                            <button type="button" th:attr="onclick='adminApproveEvent(' + ${event.id} + ')'"
+                                    class="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 active:scale-[0.98] text-white font-bold text-xs shadow-md shadow-emerald-100 transition flex items-center justify-center space-x-1.5">
+                                <span>✓</span>
+                                <span>Approve & Publish</span>
+                            </button>
+
+                            <button type="button" th:attr="onclick='adminRejectEvent(' + ${event.id} + ')'"
+                                    class="px-5 py-2.5 rounded-xl bg-slate-100 hover:bg-rose-50 text-slate-700 hover:text-rose-700 active:scale-[0.98] font-bold text-xs border border-slate-200 transition flex items-center justify-center space-x-1.5">
+                                <span>✕</span>
+                                <span>Reject</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ==================== TAB 3: EVENT CATALOG MODERATION ==================== -->
+        <section id="moderationTab" class="hidden space-y-6">
+            <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                <div>
+                    <h2 class="text-xl font-extrabold text-slate-900">Event Moderation & Catalog Oversight</h2>
+                    <p class="text-xs text-slate-500">Delist, restore, or manage any event hosted across QuickPass.</p>
+                </div>
+
+                <!-- Search & Filters -->
+                <div class="flex flex-wrap items-center gap-2">
+                    <div class="relative">
+                        <input type="text" id="eventCatalogSearch" onkeyup="filterEventCatalog()"
+                               placeholder="Search event, venue, organizer..."
+                               class="pl-8 pr-3 py-1.5 rounded-xl border border-slate-200 text-xs focus:ring-2 focus:ring-indigo-500 focus:outline-none w-56">
+                        <svg class="w-4 h-4 text-slate-400 absolute left-2.5 top-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+                        </svg>
+                    </div>
+
+                    <select id="eventStatusFilter" onchange="filterEventCatalog()"
+                            class="px-3 py-1.5 rounded-xl border border-slate-200 text-xs focus:ring-2 focus:ring-indigo-500 focus:outline-none bg-white">
+                        <option value="ALL">All Statuses</option>
+                        <option value="APPROVED">Live & Approved</option>
+                        <option value="PENDING_APPROVAL">Pending Review</option>
+                        <option value="REJECTED">Delisted / Rejected</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Master Events Table -->
+            <div class="bg-white rounded-2xl border border-slate-200/90 shadow-sm overflow-hidden">
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left text-xs text-slate-700">
+                        <thead class="bg-slate-50 border-b border-slate-200 text-[10px] uppercase font-bold text-slate-500">
+                            <tr>
+                                <th class="p-4">Event Details</th>
+                                <th class="p-4">Organizer</th>
+                                <th class="p-4">Date & Venue</th>
+                                <th class="p-4">Capacity & Pricing</th>
+                                <th class="p-4">Status</th>
+                                <th class="p-4 text-right">Moderation Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="eventCatalogTableBody" class="divide-y divide-slate-100 font-medium">
+                            <tr th:each="ev : ${allEvents}"
+                                class="hover:bg-slate-50/70 transition event-catalog-row"
+                                th:id="'catalogRow-' + ${ev.id}"
+                                th:attr="data-search=${#strings.toLowerCase(ev.title + ' ' + (ev.organizer != null ? ev.organizer.fullName + ' ' + ev.organizer.email : '') + ' ' + ev.venue + ' ' + ev.category)}, data-status=${ev.status}">
+
+                                <td class="p-4">
+                                    <div class="font-extrabold text-slate-900" th:text="${ev.title}">Event Title</div>
+                                    <div class="text-[11px] text-indigo-600 font-semibold" th:text="${ev.category}">Category</div>
+                                </td>
+
+                                <td class="p-4">
+                                    <div class="font-bold text-slate-800" th:text="${ev.organizer != null ? ev.organizer.fullName : 'N/A'}">Organizer</div>
+                                    <div class="text-[11px] text-slate-400" th:text="${ev.organizer != null ? ev.organizer.email : ''}">email</div>
+                                </td>
+
+                                <td class="p-4">
+                                    <div class="text-slate-800 font-semibold" th:text="${#temporals.format(ev.eventDateTime, 'dd MMM yyyy &bull; hh:mm a')}">Date</div>
+                                    <div class="text-[11px] text-slate-500" th:text="${ev.venue}">Venue</div>
+                                </td>
+
+                                <td class="p-4">
+                                    <div class="text-slate-800 font-bold">
+                                        <span th:text="${ev.normalCapacity + ev.vipCapacity + ev.vvipCapacity}">0</span> Total Capacity
+                                    </div>
+                                    <div class="text-[10px] text-slate-400">
+                                        N: $<span th:text="${ev.normalPrice}">0</span> | V: $<span th:text="${ev.vipPrice}">0</span> | VV: $<span th:text="${ev.vvipPrice}">0</span>
+                                    </div>
+                                </td>
+
+                                <td class="p-4" th:id="'catalogStatusCell-' + ${ev.id}">
+                                    <span th:if="${ev.status.name() == 'APPROVED'}"
+                                          class="px-2.5 py-1 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 flex items-center space-x-1 w-fit">
+                                        <span>✓</span>
+                                        <span>Live & Approved</span>
+                                    </span>
+                                    <span th:if="${ev.status.name() == 'PENDING_APPROVAL'}"
+                                          class="px-2.5 py-1 rounded-full text-[10px] font-bold bg-amber-100 text-amber-800 flex items-center space-x-1 w-fit">
+                                        <span>⏳</span>
+                                        <span>Pending Review</span>
+                                    </span>
+                                    <span th:if="${ev.status.name() == 'REJECTED'}"
+                                          class="px-2.5 py-1 rounded-full text-[10px] font-bold bg-rose-100 text-rose-800 flex items-center space-x-1 w-fit">
+                                        <span>✕</span>
+                                        <span>Delisted / Rejected</span>
+                                    </span>
+                                </td>
+
+                                <td class="p-4 text-right" th:id="'catalogActionCell-' + ${ev.id}">
+                                    <div class="flex items-center justify-end space-x-1.5">
+                                        <!-- View Event Analytics -->
+                                        <a th:href="@{'/organizer/events/' + ${ev.id}}"
+                                           class="px-2.5 py-1 rounded-lg text-xs font-bold bg-slate-100 hover:bg-slate-200 text-slate-700 transition"
+                                           title="View Live Analytics & Entry Gate Scanner">
+                                            Telemetry
+                                        </a>
+
+                                        <!-- If Approved: Delist Button -->
+                                        <button th:if="${ev.status.name() == 'APPROVED'}"
+                                                type="button" th:attr="onclick='adminDelistEvent(' + ${ev.id} + ')'"
+                                                class="px-2.5 py-1 rounded-lg text-xs font-bold bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 transition">
+                                            Delist
+                                        </button>
+
+                                        <!-- If Rejected or Pending: Restore / Approve -->
+                                        <button th:if="${ev.status.name() != 'APPROVED'}"
+                                                type="button" th:attr="onclick='adminRestoreEvent(' + ${ev.id} + ')'"
+                                                class="px-2.5 py-1 rounded-lg text-xs font-bold bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 transition">
+                                            Publish Live
+                                        </button>
+
+                                        <!-- Safe Delete (if no bookings exist) -->
+                                        <button type="button" th:attr="onclick='adminDeleteEvent(' + ${ev.id} + ')'"
+                                                class="px-2 py-1 rounded-lg text-xs font-bold text-slate-400 hover:text-rose-600 transition"
+                                                title="Delete Event">
+                                            🗑️
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- ==================== TAB 4: USER & ROLE DIRECTORY ==================== -->
+        <section id="usersTab" class="hidden space-y-6">
+            <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                <div>
+                    <h2 class="text-xl font-extrabold text-slate-900">User Identity & Privilege Governance</h2>
+                    <p class="text-xs text-slate-500">Manage registered members, elevate attendee roles, or grant organizer permissions.</p>
+                </div>
+
+                <!-- User Search & Role Filter -->
+                <div class="flex flex-wrap items-center gap-2">
+                    <div class="relative">
+                        <input type="text" id="userDirectorySearch" onkeyup="filterUserDirectory()"
+                               placeholder="Search name, email..."
+                               class="pl-8 pr-3 py-1.5 rounded-xl border border-slate-200 text-xs focus:ring-2 focus:ring-indigo-500 focus:outline-none w-56">
+                        <svg class="w-4 h-4 text-slate-400 absolute left-2.5 top-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+                        </svg>
+                    </div>
+
+                    <select id="userRoleFilter" onchange="filterUserDirectory()"
+                            class="px-3 py-1.5 rounded-xl border border-slate-200 text-xs focus:ring-2 focus:ring-indigo-500 focus:outline-none bg-white">
+                        <option value="ALL">All Roles</option>
+                        <option value="ROLE_ADMIN">Admins</option>
+                        <option value="ROLE_ORGANIZER">Organizers</option>
+                        <option value="ROLE_ATTENDEE">Attendees</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Users Table -->
+            <div class="bg-white rounded-2xl border border-slate-200/90 shadow-sm overflow-hidden">
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left text-xs text-slate-700">
+                        <thead class="bg-slate-50 border-b border-slate-200 text-[10px] uppercase font-bold text-slate-500">
+                            <tr>
+                                <th class="p-4">User</th>
+                                <th class="p-4">Registered Date</th>
+                                <th class="p-4">Assigned Role</th>
+                                <th class="p-4">Events Created</th>
+                                <th class="p-4">Bookings Made</th>
+                                <th class="p-4 text-right">Privilege Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="userDirectoryTableBody" class="divide-y divide-slate-100 font-medium">
+                            <tr th:each="u : ${users}"
+                                class="hover:bg-slate-50/70 transition user-directory-row"
+                                th:id="'userRow-' + ${u.id}"
+                                th:attr="data-search=${#strings.toLowerCase(u.fullName + ' ' + u.email)}, data-role=${u.role}">
+
+                                <td class="p-4 flex items-center space-x-3">
+                                    <div class="w-8 h-8 rounded-full bg-slate-200 text-slate-700 font-black flex items-center justify-center text-xs shrink-0"
+                                         th:text="${u.fullName != null ? u.fullName.substring(0, 1) : 'U'}">
+                                        U
+                                    </div>
+                                    <div>
+                                        <div class="font-extrabold text-slate-900" th:text="${u.fullName}">User Full Name</div>
+                                        <div class="text-[11px] text-slate-400 font-normal" th:text="${u.email}">user@quickpass.com</div>
+                                    </div>
+                                </td>
+
+                                <td class="p-4 text-slate-500"
+                                    th:text="${u.createdAt != null ? #temporals.format(u.createdAt, 'dd MMM yyyy') : 'N/A'}">
+                                    01 Jan 2026
+                                </td>
+
+                                <td class="p-4" th:id="'userRoleCell-' + ${u.id}">
+                                    <span th:if="${u.role.name() == 'ROLE_ADMIN'}"
+                                          class="px-2.5 py-1 rounded-full text-[10px] font-extrabold bg-purple-100 text-purple-800 border border-purple-200">
+                                        ROLE_ADMIN
+                                    </span>
+                                    <span th:if="${u.role.name() == 'ROLE_ORGANIZER'}"
+                                          class="px-2.5 py-1 rounded-full text-[10px] font-extrabold bg-indigo-100 text-indigo-800 border border-indigo-200">
+                                        ROLE_ORGANIZER
+                                    </span>
+                                    <span th:if="${u.role.name() == 'ROLE_ATTENDEE'}"
+                                          class="px-2.5 py-1 rounded-full text-[10px] font-extrabold bg-slate-100 text-slate-700 border border-slate-200">
+                                        ROLE_ATTENDEE
+                                    </span>
+                                </td>
+
+                                <td class="p-4 font-bold text-slate-800" th:text="${u.eventsCount}">0</td>
+                                <td class="p-4 font-bold text-slate-800" th:text="${u.bookingsCount}">0</td>
+
+                                <td class="p-4 text-right">
+                                    <!-- If Root Admin: Protected -->
+                                    <span th:if="${u.rootAdmin}" class="text-[11px] font-extrabold text-purple-700 bg-purple-50 px-2.5 py-1 rounded-lg border border-purple-200">
+                                        Primary Admin &bull; Protected
+                                    </span>
+
+                                    <!-- If Not Root Admin: Role change toggle -->
+                                    <div th:if="${!u.rootAdmin}" class="flex items-center justify-end space-x-1.5">
+                                        <button th:if="${u.role.name() != 'ROLE_ORGANIZER'}"
+                                                type="button" th:attr="onclick='adminSetUserRole(' + ${u.id} + ', \'ROLE_ORGANIZER\')'"
+                                                class="px-2.5 py-1 rounded-lg text-xs font-bold bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 transition">
+                                            Make Organizer
+                                        </button>
+                                        <button th:if="${u.role.name() != 'ROLE_ATTENDEE'}"
+                                                type="button" th:attr="onclick='adminSetUserRole(' + ${u.id} + ', \'ROLE_ATTENDEE\')'"
+                                                class="px-2.5 py-1 rounded-lg text-xs font-bold bg-slate-100 hover:bg-slate-200 text-slate-700 transition">
+                                            Set Attendee
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- ==================== TAB 5: GLOBAL BOOKINGS & AUDIT LEDGER ==================== -->
+        <section id="bookingsTab" class="hidden space-y-6">
+            <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                <div>
+                    <h2 class="text-xl font-extrabold text-slate-900">Platform Bookings & Transaction Audit Log</h2>
+                    <p class="text-xs text-slate-500">Master financial ledger of every ticket issued, live check-ins, and override controls.</p>
+                </div>
+
+                <!-- Export CSV & Search -->
+                <div class="flex flex-wrap items-center gap-2">
+                    <div class="relative">
+                        <input type="text" id="bookingsAuditSearch" onkeyup="filterBookingsAudit()"
+                               placeholder="Search ticket code, attendee, event..."
+                               class="pl-8 pr-3 py-1.5 rounded-xl border border-slate-200 text-xs focus:ring-2 focus:ring-indigo-500 focus:outline-none w-64">
+                        <svg class="w-4 h-4 text-slate-400 absolute left-2.5 top-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+                        </svg>
+                    </div>
+
+                    <select id="bookingsCheckInFilter" onchange="filterBookingsAudit()"
+                            class="px-3 py-1.5 rounded-xl border border-slate-200 text-xs focus:ring-2 focus:ring-indigo-500 focus:outline-none bg-white">
+                        <option value="ALL">All Entries</option>
+                        <option value="CHECKED_IN">Checked In</option>
+                        <option value="AWAITING">Awaiting Entry</option>
+                    </select>
+
+                    <button type="button" onclick="exportAdminBookingsCsv()"
+                            class="px-3.5 py-1.5 rounded-xl bg-purple-600 hover:bg-purple-700 text-white font-bold text-xs transition flex items-center space-x-1 shadow-sm">
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
+                        </svg>
+                        <span>Export CSV</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Bookings Master Table -->
+            <div class="bg-white rounded-2xl border border-slate-200/90 shadow-sm overflow-hidden">
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left text-xs text-slate-700">
+                        <thead class="bg-slate-50 border-b border-slate-200 text-[10px] uppercase font-bold text-slate-500">
+                            <tr>
+                                <th class="p-4">Ticket Code</th>
+                                <th class="p-4">Event Title</th>
+                                <th class="p-4">Attendee</th>
+                                <th class="p-4">Tier & Qty</th>
+                                <th class="p-4">Amount Paid</th>
+                                <th class="p-4">Booking Date</th>
+                                <th class="p-4">Entry Status</th>
+                                <th class="p-4 text-right">Gate Override</th>
+                            </tr>
+                        </thead>
+                        <tbody id="bookingsMasterTableBody" class="divide-y divide-slate-100 font-medium">
+                            <tr th:if="${bookings == null || bookings.isEmpty()}">
+                                <td colspan="8" class="p-8 text-center text-slate-400">
+                                    No platform bookings recorded yet.
+                                </td>
+                            </tr>
+
+                            <tr th:each="b : ${bookings}"
+                                class="hover:bg-slate-50/70 transition booking-audit-row"
+                                th:id="'adminBookingRow-' + ${b.bookingId}"
+                                th:attr="data-search=${#strings.toLowerCase(b.ticketCode + ' ' + b.eventTitle + ' ' + b.attendeeName + ' ' + b.attendeeEmail)}, data-used=${b.used}">
+
+                                <td class="p-4 font-mono font-bold text-indigo-700" th:text="${b.ticketCode}">
+                                    QP-XXXXXXXX
+                                </td>
+
+                                <td class="p-4">
+                                    <div class="font-bold text-slate-900" th:text="${b.eventTitle}">Event Title</div>
+                                </td>
+
+                                <td class="p-4">
+                                    <div class="font-bold text-slate-800" th:text="${b.attendeeName}">Attendee Name</div>
+                                    <div class="text-[11px] text-slate-400 font-normal" th:text="${b.attendeeEmail}">email@domain.com</div>
+                                </td>
+
+                                <td class="p-4">
+                                    <span class="px-2 py-0.5 rounded-md text-[10px] font-extrabold uppercase"
+                                          th:classappend="${b.passType.name() == 'VVIP' ? 'bg-purple-100 text-purple-800' : (b.passType.name() == 'VIP' ? 'bg-indigo-100 text-indigo-800' : 'bg-slate-100 text-slate-800')}"
+                                          th:text="${b.passType}">
+                                        VIP
+                                    </span>
+                                    <span class="text-slate-500 font-semibold ml-1">&times; <span th:text="${b.quantity}">1</span></span>
+                                </td>
+
+                                <td class="p-4 font-bold text-emerald-600">
+                                    $<span th:text="${#numbers.formatDecimal(b.totalAmount, 1, 2)}">0.00</span>
+                                </td>
+
+                                <td class="p-4 text-slate-500"
+                                    th:text="${b.bookedAt != null ? #temporals.format(b.bookedAt, 'dd MMM yyyy &bull; hh:mm a') : 'N/A'}">
+                                    Date
+                                </td>
+
+                                <td class="p-4" th:id="'adminStatusCell-' + ${b.bookingId}">
+                                    <span th:if="${b.used}" class="px-2.5 py-1 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 flex items-center space-x-1 w-fit">
+                                        <span>✓</span>
+                                        <span>Checked In</span>
+                                    </span>
+                                    <span th:if="${!b.used}" class="px-2.5 py-1 rounded-full text-[10px] font-bold bg-slate-100 text-slate-600 flex items-center space-x-1 w-fit">
+                                        <span>⏳</span>
+                                        <span>Awaiting Entry</span>
+                                    </span>
+                                </td>
+
+                                <td class="p-4 text-right" th:id="'adminActionCell-' + ${b.bookingId}">
+                                    <button type="button"
+                                            th:attr="onclick='adminToggleBookingScan(' + ${b.bookingId} + ')'"
+                                            th:classappend="${b.used ? 'bg-slate-100 hover:bg-slate-200 text-slate-700' : 'bg-indigo-50 hover:bg-indigo-100 text-indigo-700'}"
+                                            class="px-3 py-1.5 rounded-lg text-xs font-bold transition">
+                                        <span th:text="${b.used ? 'Undo Check-in' : 'Check In'}">Check In</span>
+                                    </button>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
     </main>
 
     <!-- Footer -->
     <footer class="border-t border-slate-200 py-6 text-center text-slate-400 text-xs">
-        QuickPass &bull; Built with Spring Boot, Thymeleaf, MySQL & JWT
+        QuickPass &bull; Enterprise Admin Portal & Master Ledger Suite
     </footer>
 
+    <!-- Interactive JavaScript -->
     <script>
-        async function approveEvent(id) {
-            if (!confirm('Are you sure you want to approve this event? It will instantly be published for attendees to book.')) return;
+        // Tab switching
+        function switchAdminTab(tabId, btnElement) {
+            document.querySelectorAll('section[id$="Tab"]').forEach(sec => sec.classList.add('hidden'));
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.classList.remove('active');
+                btn.classList.add('text-slate-600');
+            });
 
-            const alertBox = document.getElementById('actionAlert');
-            try {
-                const res = await fetch(`/api/events/${id}/approve`, { method: 'POST' });
-                const data = await res.json();
-
-                if (res.ok) {
-                    alertBox.className = 'mb-6 p-4 rounded-xl text-sm font-medium bg-emerald-50 border border-emerald-200 text-emerald-800';
-                    alertBox.textContent = data.message || 'Event approved successfully!';
-                    alertBox.classList.remove('hidden');
-
-                    const card = document.getElementById(`eventCard-${id}`);
-                    if (card) card.remove();
-                } else {
-                    alert(data.error || 'Approval failed');
-                }
-            } catch (err) {
-                alert('Connection error');
+            const target = document.getElementById(tabId);
+            if (target) {
+                target.classList.remove('hidden');
+            }
+            if (btnElement) {
+                btnElement.classList.add('active');
+                btnElement.classList.remove('text-slate-600');
             }
         }
 
-        async function rejectEvent(id) {
-            if (!confirm('Are you sure you want to reject this event?')) return;
+        function showAdminNotification(message, isError = false) {
+            const alertBox = document.getElementById('adminActionAlert');
+            const alertText = document.getElementById('adminActionAlertText');
+            alertText.textContent = message;
+            alertBox.className = `p-4 rounded-2xl text-sm font-semibold transition flex items-center justify-between shadow-sm ${isError ? 'bg-rose-50 border border-rose-200 text-rose-800' : 'bg-emerald-50 border border-emerald-200 text-emerald-800'}`;
+            alertBox.classList.remove('hidden');
+        }
 
-            const alertBox = document.getElementById('actionAlert');
+        // ==================== PENDING TAB ACTIONS ====================
+        async function adminApproveEvent(id) {
+            if (!confirm('Are you sure you want to approve this event? It will instantly be published live for public ticket bookings and elevate the organizer.')) return;
+
             try {
-                const res = await fetch(`/api/events/${id}/reject`, { method: 'POST' });
+                const res = await fetch(`/api/admin/events/${id}/approve`, { method: 'POST' });
                 const data = await res.json();
-
                 if (res.ok) {
-                    alertBox.className = 'mb-6 p-4 rounded-xl text-sm font-medium bg-rose-50 border border-rose-200 text-rose-800';
-                    alertBox.textContent = data.message || 'Event rejected.';
-                    alertBox.classList.remove('hidden');
-
-                    const card = document.getElementById(`eventCard-${id}`);
+                    showAdminNotification(data.message || 'Event approved successfully!');
+                    const card = document.getElementById(`pendingCard-${id}`);
                     if (card) card.remove();
+                    updatePendingQueueBadge();
                 } else {
-                    alert(data.error || 'Rejection failed');
+                    showAdminNotification(data.error || 'Approval failed.', true);
                 }
             } catch (err) {
-                alert('Connection error');
+                showAdminNotification('Connection error while approving event.', true);
             }
+        }
+
+        async function adminRejectEvent(id) {
+            if (!confirm('Are you sure you want to reject this event request?')) return;
+
+            try {
+                const res = await fetch(`/api/admin/events/${id}/reject`, { method: 'POST' });
+                const data = await res.json();
+                if (res.ok) {
+                    showAdminNotification(data.message || 'Event rejected.');
+                    const card = document.getElementById(`pendingCard-${id}`);
+                    if (card) card.remove();
+                    updatePendingQueueBadge();
+                } else {
+                    showAdminNotification(data.error || 'Rejection failed.', true);
+                }
+            } catch (err) {
+                showAdminNotification('Connection error while rejecting event.', true);
+            }
+        }
+
+        function updatePendingQueueBadge() {
+            const container = document.getElementById('pendingCardsContainer');
+            const remaining = container ? container.querySelectorAll('[id^="pendingCard-"]').length : 0;
+            const badge = document.getElementById('pendingQueueBadge');
+            if (badge) badge.textContent = remaining;
+
+            if (remaining === 0) {
+                const empty = document.getElementById('pendingEmptyState');
+                if (empty) empty.classList.remove('hidden');
+            }
+        }
+
+        // ==================== EVENT MODERATION ACTIONS ====================
+        async function adminDelistEvent(id) {
+            if (!confirm('Are you sure you want to delist this event? It will immediately disappear from the public booking dashboard.')) return;
+
+            try {
+                const res = await fetch(`/api/admin/events/${id}/delist`, { method: 'POST' });
+                const data = await res.json();
+                if (res.ok) {
+                    showAdminNotification(data.message);
+                    updateCatalogRowState(id, 'REJECTED');
+                } else {
+                    showAdminNotification(data.error || 'Delist failed.', true);
+                }
+            } catch (err) {
+                showAdminNotification('Connection error.', true);
+            }
+        }
+
+        async function adminRestoreEvent(id) {
+            if (!confirm('Are you sure you want to restore and publish this event live?')) return;
+
+            try {
+                const res = await fetch(`/api/admin/events/${id}/restore`, { method: 'POST' });
+                const data = await res.json();
+                if (res.ok) {
+                    showAdminNotification(data.message);
+                    updateCatalogRowState(id, 'APPROVED');
+                } else {
+                    showAdminNotification(data.error || 'Restore failed.', true);
+                }
+            } catch (err) {
+                showAdminNotification('Connection error.', true);
+            }
+        }
+
+        async function adminDeleteEvent(id) {
+            if (!confirm('Are you sure you want to delete this event? This action cannot be undone.')) return;
+
+            try {
+                const res = await fetch(`/api/admin/events/${id}`, { method: 'DELETE' });
+                const data = await res.json();
+                if (res.ok) {
+                    showAdminNotification(data.message);
+                    const row = document.getElementById(`catalogRow-${id}`);
+                    if (row) row.remove();
+                } else {
+                    showAdminNotification(data.error || 'Deletion rejected.', true);
+                }
+            } catch (err) {
+                showAdminNotification('Connection error.', true);
+            }
+        }
+
+        function updateCatalogRowState(id, status) {
+            const row = document.getElementById(`catalogRow-${id}`);
+            if (row) row.setAttribute('data-status', status);
+
+            const statusCell = document.getElementById(`catalogStatusCell-${id}`);
+            const actionCell = document.getElementById(`catalogActionCell-${id}`);
+
+            if (status === 'APPROVED') {
+                if (statusCell) {
+                    statusCell.innerHTML = `
+                        <span class="px-2.5 py-1 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 flex items-center space-x-1 w-fit">
+                            <span>✓</span>
+                            <span>Live & Approved</span>
+                        </span>
+                    `;
+                }
+                if (actionCell) {
+                    actionCell.innerHTML = `
+                        <div class="flex items-center justify-end space-x-1.5">
+                            <a href="/organizer/events/${id}" class="px-2.5 py-1 rounded-lg text-xs font-bold bg-slate-100 hover:bg-slate-200 text-slate-700 transition">
+                                Telemetry
+                            </a>
+                            <button type="button" onclick="adminDelistEvent(${id})"
+                                    class="px-2.5 py-1 rounded-lg text-xs font-bold bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 transition">
+                                Delist
+                            </button>
+                            <button type="button" onclick="adminDeleteEvent(${id})" class="px-2 py-1 rounded-lg text-xs font-bold text-slate-400 hover:text-rose-600 transition">
+                                🗑️
+                            </button>
+                        </div>
+                    `;
+                }
+            } else {
+                if (statusCell) {
+                    statusCell.innerHTML = `
+                        <span class="px-2.5 py-1 rounded-full text-[10px] font-bold bg-rose-100 text-rose-800 flex items-center space-x-1 w-fit">
+                            <span>✕</span>
+                            <span>Delisted / Rejected</span>
+                        </span>
+                    `;
+                }
+                if (actionCell) {
+                    actionCell.innerHTML = `
+                        <div class="flex items-center justify-end space-x-1.5">
+                            <a href="/organizer/events/${id}" class="px-2.5 py-1 rounded-lg text-xs font-bold bg-slate-100 hover:bg-slate-200 text-slate-700 transition">
+                                Telemetry
+                            </a>
+                            <button type="button" onclick="adminRestoreEvent(${id})"
+                                    class="px-2.5 py-1 rounded-lg text-xs font-bold bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 transition">
+                                Publish Live
+                            </button>
+                            <button type="button" onclick="adminDeleteEvent(${id})" class="px-2 py-1 rounded-lg text-xs font-bold text-slate-400 hover:text-rose-600 transition">
+                                🗑️
+                            </button>
+                        </div>
+                    `;
+                }
+            }
+        }
+
+        function filterEventCatalog() {
+            const query = document.getElementById('eventCatalogSearch').value.toLowerCase().trim();
+            const statusFilter = document.getElementById('eventStatusFilter').value;
+
+            document.querySelectorAll('.event-catalog-row').forEach(row => {
+                const text = row.getAttribute('data-search') || '';
+                const status = row.getAttribute('data-status') || '';
+
+                const matchesText = !query || text.includes(query);
+                const matchesStatus = statusFilter === 'ALL' || status === statusFilter;
+
+                row.style.display = matchesText && matchesStatus ? '' : 'none';
+            });
+        }
+
+        // ==================== USER DIRECTORY ACTIONS ====================
+        async function adminSetUserRole(userId, newRole) {
+            const roleName = newRole === 'ROLE_ORGANIZER' ? 'Organizer' : 'Attendee';
+            if (!confirm(`Are you sure you want to change this user's role to ${roleName}?`)) return;
+
+            try {
+                const res = await fetch(`/api/admin/users/${userId}/role`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ role: newRole })
+                });
+
+                const data = await res.json();
+                if (res.ok) {
+                    showAdminNotification(data.message);
+                    const row = document.getElementById(`userRow-${userId}`);
+                    if (row) {
+                        row.setAttribute('data-role', newRole);
+                        const roleCell = document.getElementById(`userRoleCell-${userId}`);
+                        if (roleCell) {
+                            if (newRole === 'ROLE_ORGANIZER') {
+                                roleCell.innerHTML = `<span class="px-2.5 py-1 rounded-full text-[10px] font-extrabold bg-indigo-100 text-indigo-800 border border-indigo-200">ROLE_ORGANIZER</span>`;
+                            } else {
+                                roleCell.innerHTML = `<span class="px-2.5 py-1 rounded-full text-[10px] font-extrabold bg-slate-100 text-slate-700 border border-slate-200">ROLE_ATTENDEE</span>`;
+                            }
+                        }
+                    }
+                } else {
+                    showAdminNotification(data.error || 'Failed to update user role.', true);
+                }
+            } catch (err) {
+                showAdminNotification('Connection error while changing user role.', true);
+            }
+        }
+
+        function filterUserDirectory() {
+            const query = document.getElementById('userDirectorySearch').value.toLowerCase().trim();
+            const roleFilter = document.getElementById('userRoleFilter').value;
+
+            document.querySelectorAll('.user-directory-row').forEach(row => {
+                const text = row.getAttribute('data-search') || '';
+                const role = row.getAttribute('data-role') || '';
+
+                const matchesText = !query || text.includes(query);
+                const matchesRole = roleFilter === 'ALL' || role === roleFilter;
+
+                row.style.display = matchesText && matchesRole ? '' : 'none';
+            });
+        }
+
+        // ==================== BOOKINGS AUDIT ACTIONS ====================
+        async function adminToggleBookingScan(bookingId) {
+            try {
+                const res = await fetch(`/api/admin/bookings/${bookingId}/toggle-scan`, { method: 'POST' });
+                const data = await res.json();
+                if (res.ok) {
+                    showAdminNotification(data.message);
+                    const statusCell = document.getElementById(`adminStatusCell-${bookingId}`);
+                    const actionCell = document.getElementById(`adminActionCell-${bookingId}`);
+                    const row = document.getElementById(`adminBookingRow-${bookingId}`);
+
+                    if (row) row.setAttribute('data-used', data.isUsed ? 'true' : 'false');
+
+                    if (data.isUsed) {
+                        if (statusCell) {
+                            statusCell.innerHTML = `
+                                <span class="px-2.5 py-1 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 flex items-center space-x-1 w-fit">
+                                    <span>✓</span>
+                                    <span>Checked In</span>
+                                </span>
+                            `;
+                        }
+                        if (actionCell) {
+                            actionCell.innerHTML = `
+                                <button type="button" onclick="adminToggleBookingScan(${bookingId})"
+                                        class="px-3 py-1.5 rounded-lg text-xs font-bold transition bg-slate-100 hover:bg-slate-200 text-slate-700">
+                                    Undo Check-in
+                                </button>
+                            `;
+                        }
+                    } else {
+                        if (statusCell) {
+                            statusCell.innerHTML = `
+                                <span class="px-2.5 py-1 rounded-full text-[10px] font-bold bg-slate-100 text-slate-600 flex items-center space-x-1 w-fit">
+                                    <span>⏳</span>
+                                    <span>Awaiting Entry</span>
+                                </span>
+                            `;
+                        }
+                        if (actionCell) {
+                            actionCell.innerHTML = `
+                                <button type="button" onclick="adminToggleBookingScan(${bookingId})"
+                                        class="px-3 py-1.5 rounded-lg text-xs font-bold transition bg-indigo-50 hover:bg-indigo-100 text-indigo-700">
+                                    Check In
+                                </button>
+                            `;
+                        }
+                    }
+                } else {
+                    showAdminNotification('Failed to toggle scan status.', true);
+                }
+            } catch (err) {
+                showAdminNotification('Connection error while toggling scan.', true);
+            }
+        }
+
+        function filterBookingsAudit() {
+            const query = document.getElementById('bookingsAuditSearch').value.toLowerCase().trim();
+            const filter = document.getElementById('bookingsCheckInFilter').value;
+
+            document.querySelectorAll('.booking-audit-row').forEach(row => {
+                const text = row.getAttribute('data-search') || '';
+                const isUsed = row.getAttribute('data-used') === 'true';
+
+                const matchesText = !query || text.includes(query);
+                let matchesStatus = true;
+                if (filter === 'CHECKED_IN') matchesStatus = isUsed;
+                if (filter === 'AWAITING') matchesStatus = !isUsed;
+
+                row.style.display = matchesText && matchesStatus ? '' : 'none';
+            });
+        }
+
+        // Master Ledger CSV Export
+        function exportAdminBookingsCsv() {
+            const rows = document.querySelectorAll('#bookingsMasterTableBody tr.booking-audit-row');
+            if (!rows || rows.length === 0) {
+                alert('No bookings available in the ledger to export.');
+                return;
+            }
+
+            let csv = 'Ticket Code,Event Title,Attendee Name,Attendee Email,Pass Tier,Quantity,Amount Paid,Booking Date,Status\n';
+            rows.forEach(row => {
+                const cells = row.querySelectorAll('td');
+                if (cells.length >= 7) {
+                    const code = cells[0].textContent.trim().replace(/"/g, '""');
+                    const eventTitle = cells[1].textContent.trim().replace(/"/g, '""');
+                    const nameEl = cells[2].querySelector('div:first-child');
+                    const emailEl = cells[2].querySelector('div:last-child');
+                    const name = nameEl ? nameEl.textContent.trim().replace(/"/g, '""') : '';
+                    const email = emailEl ? emailEl.textContent.trim().replace(/"/g, '""') : '';
+                    const tierEl = cells[3].querySelector('span:first-child');
+                    const tier = tierEl ? tierEl.textContent.trim().replace(/"/g, '""') : '';
+                    const amount = cells[4].textContent.trim().replace('$', '').replace(/"/g, '""');
+                    const date = cells[5].textContent.trim().replace(/"/g, '""');
+                    const status = cells[6].textContent.trim().replace(/[\n\r]+/g, ' ').replace(/\s+/g, ' ').replace(/"/g, '""');
+
+                    csv += `"${code}","${eventTitle}","${name}","${email}","${tier}",1,"${amount}","${date}","${status}"\n`;
+                }
+            });
+
+            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.setAttribute('href', url);
+            link.setAttribute('download', `QuickPass_Master_Bookings_Ledger_${new Date().toISOString().slice(0, 10)}.csv`);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
         }
 
         async function logoutUser() {
@@ -254,4 +1183,3 @@
     </script>
 </body>
 </html>
-

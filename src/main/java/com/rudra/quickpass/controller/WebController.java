@@ -1,10 +1,14 @@
 package com.rudra.quickpass.controller;
 
+import com.rudra.quickpass.dto.AdminBookingDto;
+import com.rudra.quickpass.dto.AdminDashboardStatsDto;
+import com.rudra.quickpass.dto.AdminUserDto;
 import com.rudra.quickpass.dto.EventAnalyticsDto;
 import com.rudra.quickpass.entity.Booking;
 import com.rudra.quickpass.entity.Event;
 import com.rudra.quickpass.entity.Role;
 import com.rudra.quickpass.security.CustomUserDetails;
+import com.rudra.quickpass.service.AdminService;
 import com.rudra.quickpass.service.BookingService;
 import com.rudra.quickpass.service.EventAnalyticsService;
 import com.rudra.quickpass.service.EventService;
@@ -29,16 +33,19 @@ public class WebController {
     private final EventService eventService;
     private final BookingService bookingService;
     private final EventAnalyticsService eventAnalyticsService;
+    private final AdminService adminService;
 
     @Value("${quickpass.jwt.cookie-name:quickpass_token}")
     private String cookieName;
 
     public WebController(EventService eventService,
                          BookingService bookingService,
-                         EventAnalyticsService eventAnalyticsService) {
+                         EventAnalyticsService eventAnalyticsService,
+                         AdminService adminService) {
         this.eventService = eventService;
         this.bookingService = bookingService;
         this.eventAnalyticsService = eventAnalyticsService;
+        this.adminService = adminService;
     }
 
     private boolean isAuthenticated() {
@@ -174,8 +181,11 @@ public class WebController {
         return "my-bookings";
     }
 
-    @GetMapping("/admin/events")
-    public String adminEvents(Model model) {
+    @GetMapping({"/admin", "/admin/dashboard", "/admin/events"})
+    public String adminPortal(
+            @RequestParam(value = "tab", required = false, defaultValue = "overview") String tab,
+            Model model
+    ) {
         CustomUserDetails user = getCurrentUserDetails();
         if (user == null) {
             return "redirect:/login";
@@ -186,8 +196,19 @@ public class WebController {
         }
         populateUserHeader(model, user);
 
-        List<Event> pendingEvents = eventService.getPendingEvents();
+        AdminDashboardStatsDto stats = adminService.getDashboardStats();
+        List<Event> pendingEvents = adminService.getPendingEvents();
+        List<Event> allEvents = adminService.getAllEvents();
+        List<AdminUserDto> users = adminService.getAllUsers();
+        List<AdminBookingDto> bookings = adminService.getAllBookings();
+
+        model.addAttribute("stats", stats);
         model.addAttribute("pendingEvents", pendingEvents);
+        model.addAttribute("allEvents", allEvents);
+        model.addAttribute("users", users);
+        model.addAttribute("bookings", bookings);
+        model.addAttribute("activeTab", tab);
+
         return "admin-events";
     }
 

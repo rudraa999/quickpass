@@ -24,7 +24,8 @@ public class SecurityConfig {
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
     private final CustomUserDetailsService userDetailsService;
 
-    public SecurityConfig(JwtAuthenticationFilter jwtAuthenticationFilter, CustomUserDetailsService userDetailsService) {
+    public SecurityConfig(JwtAuthenticationFilter jwtAuthenticationFilter,
+            CustomUserDetailsService userDetailsService) {
         this.jwtAuthenticationFilter = jwtAuthenticationFilter;
         this.userDetailsService = userDetailsService;
     }
@@ -49,32 +50,31 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
-            .csrf(AbstractHttpConfigurer::disable)
-            .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-            .authorizeHttpRequests(auth -> auth
-                .requestMatchers(
-                    "/",
-                    "/login",
-                    "/register",
-                    "/logout",
-                    "/api/auth/**",
-                    "/css/**",
-                    "/js/**",
-                    "/images/**"
-                ).permitAll()
-                // Only users with ROLE_ADMIN can access admin endpoints
-                .requestMatchers("/admin/**", "/api/events/*/approve", "/api/events/*/reject").hasAuthority("ROLE_ADMIN")
-                .anyRequest().authenticated()
-            )
-            .logout(logout -> logout
-                .logoutUrl("/logout")
-                .logoutSuccessUrl("/login?logout")
-                .deleteCookies("quickpass_token")
-                .clearAuthentication(true)
-                .permitAll()
-            )
-            .authenticationProvider(authenticationProvider())
-            .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
+                .csrf(AbstractHttpConfigurer::disable)
+                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .authorizeHttpRequests(auth -> auth
+                        .requestMatchers(
+                                "/",
+                                "/login",
+                                "/register",
+                                "/logout",
+                                "/api/auth/**",
+                                "/css/**",
+                                "/js/**",
+                                "/images/**")
+                        .permitAll()
+                        // Only users with ROLE_ADMIN can access admin endpoints
+                        .requestMatchers("/admin/**", "/api/admin/**", "/api/events/*/approve", "/api/events/*/reject")
+                        .hasAuthority("ROLE_ADMIN")
+                        .anyRequest().authenticated())
+                .logout(logout -> logout
+                        .logoutUrl("/logout")
+                        .logoutSuccessUrl("/login?logout")
+                        .deleteCookies("quickpass_token")
+                        .clearAuthentication(true)
+                        .permitAll())
+                .authenticationProvider(authenticationProvider())
+                .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
     }
