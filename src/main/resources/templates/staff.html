@@ -1,0 +1,457 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QuickPass &bull; Staff Gate Entry & Scanner</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- HTML5 QR Code Scanner Library -->
+    <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+    <style>
+        body { font-family: 'Plus Jakarta Sans', sans-serif; }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800 min-h-screen flex flex-col antialiased selection:bg-indigo-100 selection:text-indigo-700">
+
+    <!-- Top Navigation Bar -->
+    <nav class="bg-white border-b border-slate-200 sticky top-0 z-50 shadow-sm">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-16">
+                <!-- Brand Logo & Main Nav Links -->
+                <div class="flex items-center space-x-8">
+                    <a th:href="@{/dashboard}" class="flex items-center space-x-3">
+                        <div class="w-10 h-10 rounded-xl bg-indigo-600 flex items-center justify-center text-white shadow-md shadow-indigo-200">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z"/>
+                            </svg>
+                        </div>
+                        <span class="text-xl font-extrabold text-slate-900 tracking-tight">QuickPass</span>
+                    </a>
+
+                    <!-- Nav Items -->
+                    <div class="hidden md:flex items-center space-x-1">
+                        <a th:href="@{/dashboard}"
+                           class="px-3.5 py-2 rounded-xl text-sm font-semibold text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition">
+                            Events
+                        </a>
+                        <a th:href="@{/my-bookings}"
+                           class="px-3.5 py-2 rounded-xl text-sm font-semibold text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition">
+                            My Bookings
+                        </a>
+                        <a th:href="@{/organizer}"
+                           class="px-3.5 py-2 rounded-xl text-sm font-semibold text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition">
+                            Organizer
+                        </a>
+                        <a th:href="@{/staff}"
+                           class="px-3.5 py-2 rounded-xl text-sm font-bold bg-indigo-50 text-indigo-700 transition flex items-center space-x-1.5 border border-indigo-200 shadow-sm">
+                            <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                            <span>Staff</span>
+                        </a>
+                        <a th:if="${isAdmin}" th:href="@{/admin/events}"
+                           class="px-3.5 py-2 rounded-xl text-sm font-bold bg-purple-50 text-purple-700 border border-purple-200 hover:bg-purple-100 transition flex items-center space-x-1.5 shadow-sm">
+                            <span class="w-2 h-2 rounded-full bg-purple-600"></span>
+                            <span>Admin Portal</span>
+                        </a>
+                    </div>
+                </div>
+
+                <!-- Right Side: Account & Logout -->
+                <div class="flex items-center space-x-3">
+                    <a th:href="@{/account}"
+                       class="flex items-center space-x-2 px-3 py-1.5 rounded-xl hover:bg-slate-100 transition border border-transparent hover:border-slate-200">
+                        <div class="w-8 h-8 rounded-lg bg-indigo-100 text-indigo-700 font-bold flex items-center justify-center text-xs">
+                            <span th:text="${fullName != null ? fullName.substring(0, 1) : 'S'}">S</span>
+                        </div>
+                        <div class="hidden sm:flex flex-col text-left">
+                            <span class="text-xs font-bold text-slate-800" th:text="${fullName}">Staff User</span>
+                            <span class="text-[10px] text-emerald-600 font-bold">Gate Staff</span>
+                        </div>
+                    </a>
+
+                    <button type="button" onclick="logoutUser()"
+                       class="inline-flex items-center space-x-1 px-3 py-2 rounded-xl bg-slate-100 hover:bg-rose-50 text-slate-700 hover:text-rose-600 text-xs font-semibold transition border border-slate-200 cursor-pointer">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>
+                        </svg>
+                        <span>Logout</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Container -->
+    <main class="flex-grow max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8 w-full space-y-6">
+
+        <!-- Staff Hero Banner -->
+        <div class="bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 text-white p-6 sm:p-8 rounded-3xl shadow-xl relative overflow-hidden border border-slate-800">
+            <div class="relative z-10 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                <div class="space-y-1.5">
+                    <span class="px-3 py-1 bg-white/10 backdrop-blur-md rounded-full text-[10px] font-extrabold uppercase tracking-wider text-emerald-400 border border-white/10 inline-block mb-1">
+                        EVENT-DAY GATE ACCESS &bull; ACTIVE SCANNER
+                    </span>
+                    <h1 class="text-2xl sm:text-3xl font-black tracking-tight text-white">Staff Gate Entry & Ticket Scanner</h1>
+                    <p class="text-slate-300 text-xs sm:text-sm max-w-xl">
+                        Verify attendee passes in real time, prevent fraudulent/duplicate admissions, and review gate guidelines from the event organizer.
+                    </p>
+                </div>
+
+                <!-- Event Switcher Dropdown if Assigned to Multiple Events -->
+                <div th:if="${assignedEvents != null && assignedEvents.size() > 1}" class="bg-white/10 backdrop-blur-md p-3 rounded-2xl border border-white/10 shrink-0">
+                    <label for="eventSwitcher" class="block text-[10px] font-bold uppercase tracking-wider text-slate-300 mb-1">Switch Assigned Event</label>
+                    <select id="eventSwitcher" onchange="window.location.href='/staff?eventId=' + this.value"
+                            class="px-3 py-1.5 rounded-xl bg-slate-800 text-white text-xs border border-slate-700 font-bold focus:outline-none focus:ring-2 focus:ring-indigo-400">
+                        <option th:each="ev : ${assignedEvents}"
+                                th:value="${ev.eventId}"
+                                th:text="${ev.title}"
+                                th:selected="${activeEvent != null && activeEvent.eventId == ev.eventId}">
+                            Event Title
+                        </option>
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        <!-- Empty State: No events assigned -->
+        <div th:if="${assignedEvents == null || assignedEvents.isEmpty()}"
+             class="bg-white rounded-3xl border border-slate-200/90 p-12 text-center shadow-sm space-y-4">
+            <div class="w-16 h-16 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center mx-auto text-2xl">
+                🎫
+            </div>
+            <h3 class="text-xl font-bold text-slate-900">No Events Assigned Yet</h3>
+            <p class="text-slate-500 text-sm max-w-md mx-auto">
+                Your account is ready for gate check-in duty. As soon as an event organizer assigns your email (<span class="font-bold text-slate-700" th:text="${email}">email</span>) to their event, it will appear here instantly.
+            </p>
+        </div>
+
+        <!-- Active Event Gate Scanner View -->
+        <div th:if="${activeEvent != null}" class="space-y-6">
+
+            <!-- Active Event Information & Gate Role Pill -->
+            <div class="bg-white rounded-2xl p-5 border border-slate-200/90 shadow-sm flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                <div class="space-y-1">
+                    <div class="flex items-center space-x-2 text-xs">
+                        <span class="px-2.5 py-0.5 rounded-md text-[10px] font-extrabold uppercase bg-indigo-50 text-indigo-700 border border-indigo-200"
+                              th:text="${activeEvent.category}">
+                            Category
+                        </span>
+                        <span class="text-slate-400">&bull;</span>
+                        <span class="text-slate-600 font-semibold flex items-center space-x-1">
+                            <span>📍</span>
+                            <span th:text="${activeEvent.venue}">Venue</span>
+                        </span>
+                        <span class="text-slate-400">&bull;</span>
+                        <span class="text-slate-600 font-medium" th:text="${#temporals.format(activeEvent.eventDateTime, 'dd MMM yyyy, hh:mm a')}">
+                            Date
+                        </span>
+                    </div>
+                    <h2 class="text-xl font-black text-slate-900" th:text="${activeEvent.title}">Event Title</h2>
+                </div>
+
+                <div class="flex flex-wrap items-center gap-3">
+                    <!-- Station Assignment Pill -->
+                    <div class="px-3 py-1.5 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-bold flex items-center space-x-1.5">
+                        <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+                        <span>Station:</span>
+                        <span th:text="${activeEvent.gateRole}">Main Gate</span>
+                    </div>
+
+                    <!-- Attendance Rate Pill -->
+                    <div class="px-3 py-1.5 rounded-xl bg-slate-100 border border-slate-200 text-slate-700 text-xs font-bold flex items-center space-x-1.5">
+                        <span>Check-In:</span>
+                        <span class="text-indigo-600 font-extrabold"><span id="staffScannedDisplay" th:text="${activeEvent.totalScanned}">0</span> / <span th:text="${activeEvent.totalSold}">0</span></span>
+                        <span>(<span id="staffRateDisplay" th:text="${activeEvent.attendanceRate}">0.0</span>%)</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Organizer Live Instructions Card -->
+            <div class="bg-gradient-to-r from-amber-50 to-orange-50 border-2 border-amber-200/80 rounded-2xl p-6 shadow-sm space-y-3">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center space-x-2 text-amber-900 font-black text-sm">
+                        <span class="text-lg">📢</span>
+                        <span>Instructions from Event Organizer</span>
+                        <span class="text-xs font-normal text-amber-700">(<span th:text="${activeEvent.organizerName}">Organizer</span> &bull; <span th:text="${activeEvent.organizerEmail}">email</span>)</span>
+                    </div>
+                    <span class="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-amber-200 text-amber-900 uppercase">Live Broadcast</span>
+                </div>
+
+                <div class="p-4 bg-white/80 rounded-xl border border-amber-200 text-slate-800 text-xs sm:text-sm leading-relaxed font-medium">
+                    <span th:if="${activeEvent.staffInstructions != null && !activeEvent.staffInstructions.trim().isEmpty()}"
+                          th:text="${activeEvent.staffInstructions}">
+                        Organizer gate instructions...
+                    </span>
+                    <span th:if="${activeEvent.staffInstructions == null || activeEvent.staffInstructions.trim().isEmpty()}"
+                          class="text-slate-400 italic">
+                        No special entrance policies set by the organizer for this event. Follow standard ticket validation rules.
+                    </span>
+                </div>
+            </div>
+
+            <!-- Scanner Main Workstation (Dual View: Camera QR Scanner + Manual Code Input) -->
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+
+                <!-- Left Column (7 cols): Scanner Input & Live Camera -->
+                <div class="lg:col-span-7 bg-white rounded-2xl p-6 border border-slate-200/90 shadow-sm space-y-5">
+                    <div class="flex items-center justify-between border-b border-slate-100 pb-4">
+                        <div>
+                            <h3 class="text-base font-extrabold text-slate-900 flex items-center space-x-2">
+                                <span>📷</span>
+                                <span>Gate Ticket Scanner</span>
+                            </h3>
+                            <p class="text-xs text-slate-500">Scan digital QR codes with your device camera or type ticket codes manually.</p>
+                        </div>
+
+                        <!-- Camera Toggle Button -->
+                        <button type="button" id="cameraToggleBtn" onclick="toggleCameraScanner()"
+                                class="px-3 py-1.5 rounded-xl bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-xs font-bold transition flex items-center space-x-1.5 border border-indigo-200 cursor-pointer">
+                            <span>🎥</span>
+                            <span id="cameraBtnLabel">Start Camera Scanner</span>
+                        </button>
+                    </div>
+
+                    <!-- Camera Viewport (Hidden until activated) -->
+                    <div id="cameraScannerWrapper" class="hidden space-y-3">
+                        <div id="qr-reader" class="rounded-2xl overflow-hidden border-2 border-indigo-500 max-w-sm mx-auto shadow-inner bg-slate-900"></div>
+                        <p class="text-center text-[11px] text-slate-400">Position attendee's QuickPass QR code in front of the lens.</p>
+                    </div>
+
+                    <!-- Manual Code Input Form -->
+                    <form onsubmit="handleStaffScanSubmit(event)" class="space-y-3">
+                        <div>
+                            <label for="staffTicketInput" class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+                                Enter or Scan Ticket Code
+                            </label>
+                            <div class="flex space-x-2">
+                                <input type="text" id="staffTicketInput" autofocus autocomplete="off"
+                                       placeholder="e.g. QP-A1B2C3D4 or scan QR"
+                                       class="flex-1 px-4 py-3 rounded-xl border border-slate-300 font-mono text-base font-bold text-indigo-950 focus:ring-2 focus:ring-indigo-600 focus:outline-none bg-slate-50 uppercase placeholder-slate-400">
+                                <button type="submit" id="staffScanBtn"
+                                        class="px-6 py-3 rounded-xl bg-indigo-600 hover:bg-indigo-700 active:scale-[0.98] text-white font-extrabold text-sm shadow-md shadow-indigo-100 transition flex items-center justify-center space-x-1.5 cursor-pointer">
+                                    <span>Verify Pass</span>
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+
+                    <!-- Real-Time Verification Result Box -->
+                    <div id="staffScanResultBox" class="hidden p-5 rounded-2xl text-xs space-y-2 transition duration-200"></div>
+                </div>
+
+                <!-- Right Column (5 cols): Live Gate Attendance & Activity Log -->
+                <div class="lg:col-span-5 bg-white rounded-2xl p-6 border border-slate-200/90 shadow-sm space-y-5 flex flex-col justify-between">
+                    <div class="space-y-4">
+                        <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+                            <h3 class="text-base font-extrabold text-slate-900">Gate Session Activity</h3>
+                            <span class="text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800">
+                                Live Feed
+                            </span>
+                        </div>
+
+                        <!-- Progress Bar -->
+                        <div class="space-y-1.5">
+                            <div class="flex justify-between text-xs font-bold text-slate-600">
+                                <span>Checked-In Pacing</span>
+                                <span id="progressPercentLabel" th:text="${activeEvent.attendanceRate} + '%'">0%</span>
+                            </div>
+                            <div class="w-full bg-slate-100 rounded-full h-2.5 overflow-hidden">
+                                <div id="staffProgressBar" class="bg-indigo-600 h-2.5 rounded-full transition-all duration-300"
+                                     th:style="'width: ' + ${activeEvent.attendanceRate} + '%'"></div>
+                            </div>
+                        </div>
+
+                        <!-- Activity Log Items Stream -->
+                        <div>
+                            <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400 block mb-2">Recent Scanned Passes</span>
+                            <div id="staffActivityLog" class="space-y-2 max-h-80 overflow-y-auto text-xs pr-1">
+                                <p class="text-slate-400 italic text-center py-6">Ready to scan passes. Activity will stream here live.</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="pt-4 border-t border-slate-100 text-center text-[11px] text-slate-400">
+                        Station authorized for QuickPass Gate Verification
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="border-t border-slate-200 py-6 text-center text-slate-400 text-xs">
+        QuickPass &bull; Staff Gate Verification Suite
+    </footer>
+
+    <!-- JavaScript for Live Scanner & Camera Integration -->
+    <script th:inline="javascript">
+        /*<![CDATA[*/
+        const currentEventId = /*[[${activeEvent != null ? activeEvent.eventId : 0}]]*/ 0;
+        /*]]>*/
+
+        let html5QrCode = null;
+        let isCameraActive = false;
+
+        async function handleStaffScanSubmit(e) {
+            if (e) e.preventDefault();
+            const input = document.getElementById('staffTicketInput');
+            const code = input.value.trim();
+            if (!code) return;
+
+            await verifyTicketCode(code);
+            input.value = '';
+            input.focus();
+        }
+
+        async function verifyTicketCode(rawCode) {
+            const btn = document.getElementById('staffScanBtn');
+            const box = document.getElementById('staffScanResultBox');
+            if (btn) btn.disabled = true;
+            box.classList.remove('hidden');
+
+            try {
+                const res = await fetch(`/api/staff/events/${currentEventId}/scan`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ ticketCode: rawCode })
+                });
+
+                const data = await res.json();
+
+                if (data.status === 'SUCCESS') {
+                    box.className = 'p-5 rounded-2xl text-xs space-y-1.5 bg-emerald-50 border-2 border-emerald-400 text-emerald-950 animate-pulse';
+                    box.innerHTML = `
+                        <div class="flex items-center space-x-2 font-black text-sm text-emerald-800">
+                            <span>✓</span>
+                            <span>VALID PASS &bull; CHECKED IN!</span>
+                        </div>
+                        <div><strong>Attendee:</strong> ${escapeHtml(data.attendeeName)} (${escapeHtml(data.attendeeEmail)})</div>
+                        <div><strong>Pass Tier:</strong> ${escapeHtml(data.passType)} &bull; <strong>Quantity:</strong> ${data.quantity} Pass(es)</div>
+                        <div class="text-[11px] text-emerald-700 font-medium pt-1">${escapeHtml(data.message)}</div>
+                    `;
+                    addStaffLogItem(data.ticketCode, data.attendeeName, data.passType, true, 'Admitted');
+                    updateStaffCounters(data.totalTicketsScanned, data.totalTicketsSold, data.checkInPercentage);
+                } else if (data.status === 'ALREADY_SCANNED') {
+                    box.className = 'p-5 rounded-2xl text-xs space-y-1.5 bg-amber-50 border-2 border-amber-400 text-amber-950';
+                    box.innerHTML = `
+                        <div class="flex items-center space-x-2 font-black text-sm text-amber-800">
+                            <span>⚠️</span>
+                            <span>WARNING: ALREADY CHECKED IN!</span>
+                        </div>
+                        <div><strong>Attendee:</strong> ${escapeHtml(data.attendeeName || 'Unknown')}</div>
+                        <div><strong>Pass Tier:</strong> ${escapeHtml(data.passType || '')}</div>
+                        <div class="text-[11px] text-amber-800 font-medium pt-1">${escapeHtml(data.message)}</div>
+                    `;
+                    addStaffLogItem(data.ticketCode, data.attendeeName, data.passType, false, 'Duplicate Scan');
+                } else {
+                    box.className = 'p-5 rounded-2xl text-xs space-y-1.5 bg-rose-50 border-2 border-rose-400 text-rose-950';
+                    box.innerHTML = `
+                        <div class="flex items-center space-x-2 font-black text-sm text-rose-800">
+                            <span>✕</span>
+                            <span>INVALID PASS</span>
+                        </div>
+                        <div class="text-[11px] text-rose-700 font-medium">${escapeHtml(data.message || 'Ticket code not recognized.')}</div>
+                    `;
+                    addStaffLogItem(rawCode, 'Unknown', 'N/A', false, 'Invalid Pass');
+                }
+            } catch (err) {
+                box.className = 'p-5 rounded-2xl text-xs bg-rose-50 border border-rose-300 text-rose-900';
+                box.textContent = 'Server connection error. Please try again.';
+            } finally {
+                if (btn) btn.disabled = false;
+            }
+        }
+
+        function addStaffLogItem(code, name, type, success, label) {
+            const log = document.getElementById('staffActivityLog');
+            if (log.querySelector('p')) {
+                log.innerHTML = '';
+            }
+            const item = document.createElement('div');
+            item.className = `p-2.5 rounded-xl flex items-center justify-between border ${success ? 'bg-emerald-50 border-emerald-100 text-emerald-950' : 'bg-amber-50 border-amber-100 text-amber-950'}`;
+            item.innerHTML = `
+                <div>
+                    <span class="font-mono font-bold">${escapeHtml(code)}</span> &bull; 
+                    <span class="font-semibold">${escapeHtml(name)}</span>
+                </div>
+                <span class="text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-full ${success ? 'bg-emerald-200 text-emerald-900' : 'bg-amber-200 text-amber-900'}">${label}</span>
+            `;
+            log.prepend(item);
+        }
+
+        function updateStaffCounters(scanned, totalSold, rate) {
+            const scannedEl = document.getElementById('staffScannedDisplay');
+            const rateEl = document.getElementById('staffRateDisplay');
+            const progressEl = document.getElementById('staffProgressBar');
+            const labelEl = document.getElementById('progressPercentLabel');
+
+            if (scannedEl) scannedEl.textContent = scanned;
+            if (rateEl) rateEl.textContent = (rate || 0).toFixed(1);
+            if (labelEl) labelEl.textContent = (rate || 0).toFixed(1) + '%';
+            if (progressEl) progressEl.style.width = (rate || 0) + '%';
+        }
+
+        // Camera QR Scanner Toggle
+        async function toggleCameraScanner() {
+            const wrapper = document.getElementById('cameraScannerWrapper');
+            const label = document.getElementById('cameraBtnLabel');
+
+            if (isCameraActive) {
+                // Stop camera
+                if (html5QrCode) {
+                    await html5QrCode.stop();
+                    html5QrCode.clear();
+                }
+                wrapper.classList.add('hidden');
+                label.textContent = 'Start Camera Scanner';
+                isCameraActive = false;
+            } else {
+                // Start camera
+                wrapper.classList.remove('hidden');
+                label.textContent = 'Stop Camera';
+                isCameraActive = true;
+
+                html5QrCode = new Html5Qrcode("qr-reader");
+                try {
+                    await html5QrCode.start(
+                        { facingMode: "environment" },
+                        { fps: 10, qrbox: { width: 250, height: 250 } },
+                        (decodedText) => {
+                            // Scanned QR Code
+                            verifyTicketCode(decodedText);
+                        },
+                        (errorMessage) => {
+                            // frame parse failure, ignore
+                        }
+                    );
+                } catch (err) {
+                    alert('Camera access denied or unavailable: ' + err);
+                    wrapper.classList.add('hidden');
+                    label.textContent = 'Start Camera Scanner';
+                    isCameraActive = false;
+                }
+            }
+        }
+
+        function escapeHtml(str) {
+            if (!str) return '';
+            return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+        }
+
+        async function logoutUser() {
+            try {
+                localStorage.removeItem('quickpass_token');
+                await fetch('/api/auth/logout', { method: 'POST' });
+            } catch (err) {
+                console.error(err);
+            } finally {
+                window.location.href = '/login?logout';
+            }
+        }
+    </script>
+</body>
+</html>
+

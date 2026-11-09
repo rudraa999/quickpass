@@ -4,6 +4,7 @@ import com.rudra.quickpass.dto.AdminBookingDto;
 import com.rudra.quickpass.dto.AdminDashboardStatsDto;
 import com.rudra.quickpass.dto.AdminUserDto;
 import com.rudra.quickpass.dto.EventAnalyticsDto;
+import com.rudra.quickpass.dto.StaffEventDto;
 import com.rudra.quickpass.entity.Booking;
 import com.rudra.quickpass.entity.Event;
 import com.rudra.quickpass.entity.Role;
@@ -12,6 +13,8 @@ import com.rudra.quickpass.service.AdminService;
 import com.rudra.quickpass.service.BookingService;
 import com.rudra.quickpass.service.EventAnalyticsService;
 import com.rudra.quickpass.service.EventService;
+import com.rudra.quickpass.service.StaffService;
+import com.rudra.quickpass.repository.EventStaffRepository;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.beans.factory.annotation.Value;
@@ -34,6 +37,8 @@ public class WebController {
     private final BookingService bookingService;
     private final EventAnalyticsService eventAnalyticsService;
     private final AdminService adminService;
+    private final StaffService staffService;
+    private final EventStaffRepository eventStaffRepository;
 
     @Value("${quickpass.jwt.cookie-name:quickpass_token}")
     private String cookieName;
@@ -41,11 +46,15 @@ public class WebController {
     public WebController(EventService eventService,
                          BookingService bookingService,
                          EventAnalyticsService eventAnalyticsService,
-                         AdminService adminService) {
+                         AdminService adminService,
+                         StaffService staffService,
+                         EventStaffRepository eventStaffRepository) {
         this.eventService = eventService;
         this.bookingService = bookingService;
         this.eventAnalyticsService = eventAnalyticsService;
         this.adminService = adminService;
+        this.staffService = staffService;
+        this.eventStaffRepository = eventStaffRepository;
     }
 
     private boolean isAuthenticated() {
@@ -66,7 +75,14 @@ public class WebController {
             model.addAttribute("fullName", user.getFullName());
             model.addAttribute("email", user.getUsername());
             model.addAttribute("role", user.getRole());
-            model.addAttribute("isAdmin", Role.ROLE_ADMIN.name().equals(user.getRole()));
+            boolean isAdmin = Role.ROLE_ADMIN.name().equals(user.getRole());
+            boolean isStaff = Role.ROLE_STAFF.name().equals(user.getRole())
+                    || Role.ROLE_ORGANIZER.name().equals(user.getRole())
+                    || isAdmin
+                    || eventStaffRepository.existsByStaffId(user.getId());
+
+            model.addAttribute("isAdmin", isAdmin);
+            model.addAttribute("isStaff", isStaff);
         }
     }
 
@@ -179,6 +195,74 @@ public class WebController {
         List<Booking> bookings = bookingService.getMyBookings(user.getId());
         model.addAttribute("bookings", bookings);
         return "my-bookings";
+    }
+
+    @GetMapping("/staff")
+    public String staffPortal(
+            @RequestParam(value = "eventId", required = false) Long selectedEventId,
+            Model model
+    ) {
+        CustomUserDetails user = getCurrentUserDetails();
+        if (user == null) {
+            return "redirect:/login";
+        }
+        populateUserHeader(model, user);
+
+        List<StaffEventDto> assignedEvents = staffService.getAssignedEventsForStaff(user.getId());
+
+        // If user is organizer or admin with no direct staff assignment, also provide their hosted events
+        boolean isAdmin = Role.ROLE_ADMIN.name().equals(user.getRole());
+        boolean isOrganizer = Role.ROLE_ORGANIZER.name().equals(user.getRole());
+
+        if (assignedEvents.isEmpty() && (isOrganizer || isAdmin)) {
+            List<Event> myEvents = isAdmin ? eventService.getApprovedEvents() : eventService.getOrganizerEvents(user.getId());
+            for (Event ev : myEvents) {
+                List<Booking> bookings = bookingService.getBookingsForEvent(ev.getId());
+                int totalSold = 0;
+                int totalScanned = 0;
+                for (Booking b : bookings) {
+                    totalSold += b.getQuantity();
+                    if (b.isUsed()) totalScanned += b.getQuantity();
+                }
+                double rate = totalSold > 0 ? ((double) totalScanned / totalSold) * 100.0 : 0.0;
+                rate = Math.round(rate * 10.0) / 10.0;
+
+                String orgName = ev.getOrganizer() != null ? ev.getOrganizer().getFullName() : "Organizer";
+                String orgEmail = ev.getOrganizer() != null ? ev.getOrganizer().getEmail() : "";
+
+                assignedEvents.add(new StaffEventDto(
+                        ev.getId(),
+                        ev.getTitle(),
+                        ev.getCategory(),
+                        ev.getVenue(),
+                        ev.getEventDateTime(),
+                        orgName,
+                        orgEmail,
+                        ev.getStaffInstructions(),
+                        "Host / Gate Lead",
+                        totalSold,
+                        totalScanned,
+                        rate
+                ));
+            }
+        }
+
+        model.addAttribute("assignedEvents", assignedEvents);
+
+        StaffEventDto activeEvent = null;
+        if (!assignedEvents.isEmpty()) {
+            if (selectedEventId != null) {
+                activeEvent = assignedEvents.stream()
+                        .filter(e -> e.getEventId().equals(selectedEventId))
+                        .findFirst()
+                        .orElse(assignedEvents.get(0));
+            } else {
+                activeEvent = assignedEvents.get(0);
+            }
+        }
+        model.addAttribute("activeEvent", activeEvent);
+
+        return "staff";
     }
 
     @GetMapping({"/admin", "/admin/dashboard", "/admin/events"})

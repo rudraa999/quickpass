@@ -40,6 +40,10 @@ public class EventAnalyticsDto {
     // Full Attendee Guest List
     private List<AttendeeBookingDto> bookings = new ArrayList<>();
 
+    // Staff Roster & Instructions
+    private String staffInstructions;
+    private List<StaffMemberDto> staff = new ArrayList<>();
+
     public EventAnalyticsDto() {
     }
 
@@ -233,6 +237,22 @@ public class EventAnalyticsDto {
 
     public void setBookings(List<AttendeeBookingDto> bookings) {
         this.bookings = bookings;
+    }
+
+    public String getStaffInstructions() {
+        return staffInstructions;
+    }
+
+    public void setStaffInstructions(String staffInstructions) {
+        this.staffInstructions = staffInstructions;
+    }
+
+    public List<StaffMemberDto> getStaff() {
+        return staff;
+    }
+
+    public void setStaff(List<StaffMemberDto> staff) {
+        this.staff = staff;
     }
 }
 

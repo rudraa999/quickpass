@@ -50,6 +50,12 @@
                             class="px-3.5 py-2 rounded-xl text-sm font-semibold text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition">
                             Organizer
                         </a>
+                        <!-- Staff Portal Button: Visible to Staff, Organizer, and Admin -->
+                        <a th:if="${isStaff or role == 'ROLE_STAFF' or role == 'ROLE_ORGANIZER' or isAdmin}"
+                            th:href="@{/staff}"
+                            class="px-3.5 py-2 rounded-xl text-sm font-semibold text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition">
+                            Staff
+                        </a>
                         <!-- Admin Portal: Strictly visible ONLY to Main Admin -->
                         <a th:if="${isAdmin}" th:href="@{/admin/events}"
                             class="px-3.5 py-2 rounded-xl text-sm font-bold bg-purple-50 text-purple-700 border border-purple-200 hover:bg-purple-100 transition flex items-center space-x-1.5 shadow-sm">

@@ -58,6 +58,9 @@ public class Event {
     @JoinColumn(name = "organizer_id", nullable = false)
     private User organizer;
 
+    @Column(columnDefinition = "TEXT")
+    private String staffInstructions;
+
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
@@ -239,6 +242,14 @@ public class Event {
 
     public void setCreatedAt(LocalDateTime createdAt) {
         this.createdAt = createdAt;
+    }
+
+    public String getStaffInstructions() {
+        return staffInstructions;
+    }
+
+    public void setStaffInstructions(String staffInstructions) {
+        this.staffInstructions = staffInstructions;
     }
 }
 
