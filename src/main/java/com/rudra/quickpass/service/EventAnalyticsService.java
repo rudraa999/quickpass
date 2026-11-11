@@ -21,14 +21,10 @@ public class EventAnalyticsService {
 
     private final EventRepository eventRepository;
     private final BookingRepository bookingRepository;
-    private final com.rudra.quickpass.repository.EventStaffRepository eventStaffRepository;
 
-    public EventAnalyticsService(EventRepository eventRepository,
-                                 BookingRepository bookingRepository,
-                                 com.rudra.quickpass.repository.EventStaffRepository eventStaffRepository) {
+    public EventAnalyticsService(EventRepository eventRepository, BookingRepository bookingRepository) {
         this.eventRepository = eventRepository;
         this.bookingRepository = bookingRepository;
-        this.eventStaffRepository = eventStaffRepository;
     }
 
     public EventAnalyticsDto getEventAnalytics(Long eventId, Long currentUserId, boolean isAdmin) {
@@ -144,24 +140,6 @@ public class EventAnalyticsService {
         dto.setStatus(event.getStatus());
         dto.setOrganizerName(event.getOrganizer() != null ? event.getOrganizer().getFullName() : "Organizer");
         dto.setTotalCapacity(event.getTotalCapacity());
-        dto.setStaffInstructions(event.getStaffInstructions());
-
-        // Load Staff roster
-        List<com.rudra.quickpass.entity.EventStaff> eventStaffList = eventStaffRepository.findByEventIdOrderByAssignedAtDesc(event.getId());
-        List<StaffMemberDto> staffDtos = new ArrayList<>();
-        for (com.rudra.quickpass.entity.EventStaff es : eventStaffList) {
-            com.rudra.quickpass.entity.User u = es.getStaff();
-            staffDtos.add(new StaffMemberDto(
-                    es.getId(),
-                    u.getId(),
-                    u.getFullName(),
-                    u.getEmail(),
-                    u.getRole(),
-                    es.getGateRole(),
-                    es.getAssignedAt()
-            ));
-        }
-        dto.setStaff(staffDtos);
 
         int normalSold = 0, vipSold = 0, vvipSold = 0;
         int normalScanned = 0, vipScanned = 0, vvipScanned = 0;
@@ -274,14 +252,10 @@ public class EventAnalyticsService {
     }
 
     private void validateOwnership(Event event, Long currentUserId, boolean isAdmin) {
-        if (isAdmin) return; // Platform admin can view and scan
-        if (event.getOrganizer() != null && event.getOrganizer().getId().equals(currentUserId)) {
-            return; // Organizer can view and scan
+        if (isAdmin) return; // Platform admin can view analytics
+        if (event.getOrganizer() == null || !event.getOrganizer().getId().equals(currentUserId)) {
+            throw new AccessDeniedException("Access denied: You are not the organizer of this event.");
         }
-        if (eventStaffRepository.existsByEventIdAndStaffId(event.getId(), currentUserId)) {
-            return; // Assigned gate staff member can view and scan
-        }
-        throw new AccessDeniedException("Access denied: You are neither the organizer nor assigned gate staff for this event.");
     }
 
     private String extractTicketCode(String raw) {

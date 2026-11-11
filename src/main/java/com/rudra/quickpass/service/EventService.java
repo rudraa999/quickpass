@@ -17,14 +17,10 @@ public class EventService {
 
     private final EventRepository eventRepository;
     private final UserRepository userRepository;
-    private final StaffService staffService;
 
-    public EventService(EventRepository eventRepository,
-                        UserRepository userRepository,
-                        StaffService staffService) {
+    public EventService(EventRepository eventRepository, UserRepository userRepository) {
         this.eventRepository = eventRepository;
         this.userRepository = userRepository;
-        this.staffService = staffService;
     }
 
     @Transactional
@@ -37,7 +33,6 @@ public class EventService {
         event.setEventDateTime(req.getEventDateTime());
         event.setBookingStartDate(req.getBookingStartDate());
         event.setBookingEndDate(req.getBookingEndDate());
-        event.setStaffInstructions(req.getStaffInstructions());
 
         // Normal Tier
         event.setNormalPrice(req.getNormalPrice());
@@ -58,14 +53,7 @@ public class EventService {
         event.setStatus(EventStatus.PENDING_APPROVAL);
         event.setOrganizer(organizer);
 
-        Event savedEvent = eventRepository.save(event);
-
-        // Assign initial staff emails if provided
-        if (req.getStaffEmails() != null && !req.getStaffEmails().trim().isEmpty()) {
-            staffService.assignStaffEmailsBatch(savedEvent, req.getStaffEmails());
-        }
-
-        return savedEvent;
+        return eventRepository.save(event);
     }
 
     public List<Event> getApprovedEvents() {

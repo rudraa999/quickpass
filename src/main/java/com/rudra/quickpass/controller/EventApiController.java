@@ -5,7 +5,6 @@ import com.rudra.quickpass.dto.CreateEventRequest;
 import com.rudra.quickpass.dto.EventAnalyticsDto;
 import com.rudra.quickpass.dto.ScanTicketRequest;
 import com.rudra.quickpass.dto.ScanTicketResponse;
-import com.rudra.quickpass.dto.StaffMemberDto;
 import com.rudra.quickpass.entity.Booking;
 import com.rudra.quickpass.entity.Event;
 import com.rudra.quickpass.entity.Role;
@@ -14,7 +13,6 @@ import com.rudra.quickpass.security.CustomUserDetails;
 import com.rudra.quickpass.service.BookingService;
 import com.rudra.quickpass.service.EventAnalyticsService;
 import com.rudra.quickpass.service.EventService;
-import com.rudra.quickpass.service.StaffService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -22,7 +20,6 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
 @RestController
@@ -32,16 +29,13 @@ public class EventApiController {
     private final EventService eventService;
     private final BookingService bookingService;
     private final EventAnalyticsService eventAnalyticsService;
-    private final StaffService staffService;
 
     public EventApiController(EventService eventService,
                               BookingService bookingService,
-                              EventAnalyticsService eventAnalyticsService,
-                              StaffService staffService) {
+                              EventAnalyticsService eventAnalyticsService) {
         this.eventService = eventService;
         this.bookingService = bookingService;
         this.eventAnalyticsService = eventAnalyticsService;
-        this.staffService = staffService;
     }
 
     @PostMapping
@@ -160,59 +154,5 @@ public class EventApiController {
         response.put("isUsed", isNowUsed);
         response.put("message", isNowUsed ? "Attendee checked in successfully" : "Attendee check-in revoked");
         return ResponseEntity.ok(response);
-    }
-
-    @GetMapping("/{id}/staff")
-    public ResponseEntity<List<StaffMemberDto>> getEventStaff(
-            @PathVariable Long id,
-            @AuthenticationPrincipal CustomUserDetails userDetails
-    ) {
-        if (userDetails == null) return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
-        boolean isAdmin = Role.ROLE_ADMIN.name().equals(userDetails.getRole());
-        return ResponseEntity.ok(staffService.getStaffForEvent(id, userDetails.getId(), isAdmin));
-    }
-
-    @PostMapping("/{id}/staff")
-    public ResponseEntity<StaffMemberDto> addEventStaff(
-            @PathVariable Long id,
-            @RequestBody Map<String, String> payload,
-            @AuthenticationPrincipal CustomUserDetails userDetails
-    ) {
-        if (userDetails == null) return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
-        boolean isAdmin = Role.ROLE_ADMIN.name().equals(userDetails.getRole());
-        String email = payload.get("email");
-        String gateRole = payload.get("gateRole");
-        StaffMemberDto dto = staffService.addStaffToEvent(id, email, gateRole, userDetails.getId(), isAdmin);
-        return ResponseEntity.ok(dto);
-    }
-
-    @DeleteMapping("/{id}/staff/{staffUserId}")
-    public ResponseEntity<Map<String, String>> removeEventStaff(
-            @PathVariable Long id,
-            @PathVariable Long staffUserId,
-            @AuthenticationPrincipal CustomUserDetails userDetails
-    ) {
-        if (userDetails == null) return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
-        boolean isAdmin = Role.ROLE_ADMIN.name().equals(userDetails.getRole());
-        staffService.removeStaffFromEvent(id, staffUserId, userDetails.getId(), isAdmin);
-        Map<String, String> res = new HashMap<>();
-        res.put("message", "Staff member removed successfully.");
-        return ResponseEntity.ok(res);
-    }
-
-    @PostMapping("/{id}/staff/instructions")
-    public ResponseEntity<Map<String, String>> updateStaffInstructions(
-            @PathVariable Long id,
-            @RequestBody Map<String, String> payload,
-            @AuthenticationPrincipal CustomUserDetails userDetails
-    ) {
-        if (userDetails == null) return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
-        boolean isAdmin = Role.ROLE_ADMIN.name().equals(userDetails.getRole());
-        String instructions = payload.get("instructions");
-        staffService.updateStaffInstructions(id, instructions, userDetails.getId(), isAdmin);
-        Map<String, String> res = new HashMap<>();
-        res.put("message", "Staff instructions updated successfully.");
-        res.put("instructions", instructions != null ? instructions : "");
-        return ResponseEntity.ok(res);
     }
 }

@@ -103,10 +103,6 @@ public class BookingService {
         return bookingRepository.findByAttendeeIdOrderByBookedAtDesc(attendeeId);
     }
 
-    public List<Booking> getBookingsForEvent(Long eventId) {
-        return bookingRepository.findByEventIdOrderByBookedAtDesc(eventId);
-    }
-
     public Booking getBookingById(Long bookingId) {
         return bookingRepository.findById(bookingId)
                 .orElseThrow(() -> new IllegalArgumentException("Booking not found"));

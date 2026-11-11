@@ -66,9 +66,6 @@ public class SecurityConfig {
                         // Only users with ROLE_ADMIN can access admin endpoints
                         .requestMatchers("/admin/**", "/api/admin/**", "/api/events/*/approve", "/api/events/*/reject")
                         .hasAuthority("ROLE_ADMIN")
-                        // Staff endpoints accessible by Staff, Organizer, or Admin
-                        .requestMatchers("/staff/**", "/api/staff/**")
-                        .hasAnyAuthority("ROLE_STAFF", "ROLE_ORGANIZER", "ROLE_ADMIN")
                         .anyRequest().authenticated())
                 .logout(logout -> logout
                         .logoutUrl("/logout")

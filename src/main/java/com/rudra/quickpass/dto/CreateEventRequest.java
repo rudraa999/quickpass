@@ -37,10 +37,6 @@ public class CreateEventRequest {
     private BigDecimal vvipPrice = BigDecimal.ZERO;
     private int vvipCapacity = 0;
 
-    // Staff assignment & instructions
-    private String staffEmails;
-    private String staffInstructions;
-
     public CreateEventRequest() {
     }
 
@@ -147,22 +143,6 @@ public class CreateEventRequest {
 
     public void setVvipCapacity(int vvipCapacity) {
         this.vvipCapacity = vvipCapacity;
-    }
-
-    public String getStaffEmails() {
-        return staffEmails;
-    }
-
-    public void setStaffEmails(String staffEmails) {
-        this.staffEmails = staffEmails;
-    }
-
-    public String getStaffInstructions() {
-        return staffInstructions;
-    }
-
-    public void setStaffInstructions(String staffInstructions) {
-        this.staffInstructions = staffInstructions;
     }
 }
 
