@@ -67,6 +67,10 @@ public class WebController {
             model.addAttribute("email", user.getUsername());
             model.addAttribute("role", user.getRole());
             model.addAttribute("isAdmin", Role.ROLE_ADMIN.name().equals(user.getRole()));
+            model.addAttribute("isStaff", Role.ROLE_STAFF.name().equals(user.getRole()));
+            model.addAttribute("canAccessStaffPortal", Role.ROLE_STAFF.name().equals(user.getRole())
+                    || Role.ROLE_ORGANIZER.name().equals(user.getRole())
+                    || Role.ROLE_ADMIN.name().equals(user.getRole()));
         }
     }
 
@@ -210,6 +214,64 @@ public class WebController {
         model.addAttribute("activeTab", tab);
 
         return "admin-events";
+    }
+
+    @GetMapping("/staff/events")
+    public String staffEvents(Model model) {
+        CustomUserDetails user = getCurrentUserDetails();
+        if (user == null) {
+            return "redirect:/login";
+        }
+        populateUserHeader(model, user);
+
+        List<Event> assignedEvents;
+        if (Role.ROLE_ADMIN.name().equals(user.getRole())) {
+            assignedEvents = eventService.getApprovedEvents();
+        } else if (Role.ROLE_ORGANIZER.name().equals(user.getRole())) {
+            assignedEvents = eventService.getOrganizerEvents(user.getId());
+            List<Event> staffed = eventService.getEventsForStaff(user.getId());
+            for (Event e : staffed) {
+                if (assignedEvents.stream().noneMatch(existing -> existing.getId().equals(e.getId()))) {
+                    assignedEvents.add(e);
+                }
+            }
+        } else {
+            assignedEvents = eventService.getEventsForStaff(user.getId());
+        }
+
+        model.addAttribute("assignedEvents", assignedEvents);
+        return "staff-events";
+    }
+
+    @GetMapping("/staff/events/{id}")
+    public String staffScannerPortal(@PathVariable Long id, Model model) {
+        CustomUserDetails user = getCurrentUserDetails();
+        if (user == null) {
+            return "redirect:/login";
+        }
+        populateUserHeader(model, user);
+
+        Event event = eventService.getEventById(id);
+        boolean isAdmin = Role.ROLE_ADMIN.name().equals(user.getRole());
+        boolean isOrganizer = event.getOrganizer() != null && event.getOrganizer().getId().equals(user.getId());
+        boolean isStaff = eventService.isUserStaffForEvent(id, user.getId());
+
+        if (!isAdmin && !isOrganizer && !isStaff) {
+            return "redirect:/staff/events?error=unauthorized";
+        }
+
+        List<Booking> bookings = bookingService.getEventBookings(id);
+        int totalSold = bookings.stream().mapToInt(Booking::getQuantity).sum();
+        int totalScanned = bookings.stream().filter(Booking::isUsed).mapToInt(Booking::getQuantity).sum();
+        double checkInRate = totalSold > 0 ? ((double) totalScanned / totalSold) * 100.0 : 0.0;
+
+        model.addAttribute("event", event);
+        model.addAttribute("bookings", bookings);
+        model.addAttribute("totalSold", totalSold);
+        model.addAttribute("totalScanned", totalScanned);
+        model.addAttribute("checkInRate", checkInRate);
+
+        return "staff-scanner";
     }
 
     @GetMapping("/account")

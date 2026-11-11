@@ -3,6 +3,8 @@ package com.rudra.quickpass.entity;
 import jakarta.persistence.*;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.HashSet;
+import java.util.Set;
 
 @Entity
 @Table(name = "events")
@@ -57,6 +59,14 @@ public class Event {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "organizer_id", nullable = false)
     private User organizer;
+
+    @ManyToMany(fetch = FetchType.LAZY)
+    @JoinTable(
+        name = "event_staff",
+        joinColumns = @JoinColumn(name = "event_id"),
+        inverseJoinColumns = @JoinColumn(name = "user_id")
+    )
+    private Set<User> staffMembers = new HashSet<>();
 
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;
@@ -239,6 +249,27 @@ public class Event {
 
     public void setCreatedAt(LocalDateTime createdAt) {
         this.createdAt = createdAt;
+    }
+
+    public Set<User> getStaffMembers() {
+        if (staffMembers == null) {
+            staffMembers = new HashSet<>();
+        }
+        return staffMembers;
+    }
+
+    public void setStaffMembers(Set<User> staffMembers) {
+        this.staffMembers = staffMembers;
+    }
+
+    public void addStaffMember(User user) {
+        getStaffMembers().add(user);
+    }
+
+    public void removeStaffMember(User user) {
+        if (this.staffMembers != null) {
+            this.staffMembers.remove(user);
+        }
     }
 }
 

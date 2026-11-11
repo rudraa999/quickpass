@@ -56,6 +56,11 @@
                             class="px-3.5 py-2 rounded-xl text-sm font-bold bg-indigo-50 text-indigo-700">
                             Organizer
                         </a>
+                        <!-- Staff Portal: Visible to Staff, Organizers, and Admins -->
+                        <a th:if="${canAccessStaffPortal}" th:href="@{/staff/events}"
+                            class="px-3.5 py-2 rounded-xl text-sm font-semibold text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition flex items-center space-x-1">
+                            <span>Staff Portal</span>
+                        </a>
                         <!-- Admin Portal: Strictly visible ONLY to Main Admin -->
                         <a th:if="${isAdmin}" th:href="@{/admin/events}"
                             class="px-3.5 py-2 rounded-xl text-sm font-bold bg-purple-50 text-purple-700 border border-purple-200 hover:bg-purple-100 transition flex items-center space-x-1.5 shadow-sm">
@@ -314,6 +319,17 @@
                 <span>Guest List & Attendees</span>
                 <span class="ml-1.5 px-2 py-0.5 rounded-full text-[10px] bg-indigo-100 text-indigo-700 font-extrabold"
                     th:text="${analytics.bookings.size()}">0</span>
+            </button>
+
+            <button type="button" onclick="switchTab('staffCrewTab', this)"
+                class="tab-btn px-4 py-2.5 rounded-xl text-xs font-bold text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition flex items-center space-x-2">
+                <svg class="w-4 h-4 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                </svg>
+                <span>Staff & Check-in Crew</span>
+                <span id="staffCrewCountBadge" class="ml-1.5 px-2 py-0.5 rounded-full text-[10px] bg-emerald-100 text-emerald-800 font-extrabold"
+                    th:text="${analytics.staffMembers != null ? analytics.staffMembers.size() : 0}">0</span>
             </button>
         </div>
 
@@ -858,6 +874,121 @@
             </div>
         </section>
 
+        <!-- ==================== TAB 5: STAFF & CHECK-IN CREW ==================== -->
+        <section id="staffCrewTab" class="hidden space-y-6">
+            <!-- Staff Section Header -->
+            <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                <div>
+                    <h2 class="text-xl font-extrabold text-slate-900">Event Staff & Gatekeeper Crew</h2>
+                    <p class="text-xs text-slate-500">Authorize team members to validate and scan ticket QR codes on event day without exposing financial data.</p>
+                </div>
+                <div class="flex items-center space-x-2 text-xs font-semibold text-slate-600">
+                    <span>Crew count:</span>
+                    <span id="staffRosterBadge" class="px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-800 font-extrabold"
+                          th:text="${analytics.staffMembers != null ? analytics.staffMembers.size() : 0}">0</span>
+                </div>
+            </div>
+
+            <!-- Global Alert Box for Staff Actions -->
+            <div id="staffActionAlert" class="hidden p-4 rounded-2xl text-xs font-semibold transition"></div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+                <!-- Add Staff Card -->
+                <div class="lg:col-span-5 bg-white rounded-3xl p-6 border border-slate-200/90 shadow-sm space-y-4">
+                    <div class="flex items-center space-x-3">
+                        <div class="w-10 h-10 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center font-bold text-lg">
+                            👥
+                        </div>
+                        <div>
+                            <h3 class="text-sm font-extrabold text-slate-900">Assign Check-in Crew Member</h3>
+                            <p class="text-[11px] text-slate-500">Add an email to authorize gate scanning</p>
+                        </div>
+                    </div>
+
+                    <form onsubmit="handleAssignStaff(event)" class="space-y-4 pt-1">
+                        <div>
+                            <label class="block text-xs font-bold text-slate-700 mb-1">Staff Member Email *</label>
+                            <input type="email" id="staffEmailInput" required
+                                   placeholder="e.g. staff@quickpass.com"
+                                   class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-xs focus:ring-2 focus:ring-emerald-500 focus:outline-none">
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-bold text-slate-700 mb-1">Full Name (Optional)</label>
+                            <input type="text" id="staffNameInput"
+                                   placeholder="e.g. Alex Gatekeeper"
+                                   class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-xs focus:ring-2 focus:ring-emerald-500 focus:outline-none">
+                        </div>
+
+                        <div class="p-3.5 rounded-2xl bg-slate-50 border border-slate-100 text-[11px] text-slate-500 space-y-1">
+                            <div class="font-bold text-slate-700">How it works:</div>
+                            <div>&bull; If the user exists on QuickPass, their account will be elevated to <strong>ROLE_STAFF</strong>.</div>
+                            <div>&bull; If new, an account is auto-created with initial password <strong>Staff@123</strong>.</div>
+                            <div>&bull; They can log in and open <strong>/staff/events</strong> to start scanning passes!</div>
+                        </div>
+
+                        <button type="submit" id="addStaffBtn"
+                                class="w-full py-3 rounded-2xl bg-emerald-600 hover:bg-emerald-700 active:scale-[0.98] text-white font-extrabold text-xs shadow-md shadow-emerald-200 transition">
+                            Assign as Event Staff
+                        </button>
+                    </form>
+                </div>
+
+                <!-- Assigned Staff Table -->
+                <div class="lg:col-span-7 bg-white rounded-3xl border border-slate-200/90 shadow-sm overflow-hidden flex flex-col">
+                    <div class="p-5 border-b border-slate-100 flex items-center justify-between">
+                        <div>
+                            <h3 class="text-sm font-extrabold text-slate-900">Authorized Gate Crew Roster</h3>
+                            <p class="text-[11px] text-slate-400">Team members with scanner permissions for this event</p>
+                        </div>
+                    </div>
+
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left text-xs text-slate-700">
+                            <thead class="bg-slate-50 border-b border-slate-200 text-[10px] uppercase font-bold text-slate-500">
+                                <tr>
+                                    <th class="p-3.5">Staff Member</th>
+                                    <th class="p-3.5">Role</th>
+                                    <th class="p-3.5">Status</th>
+                                    <th class="p-3.5 text-right">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody id="staffRosterTableBody" class="divide-y divide-slate-100 font-medium">
+                                <tr th:if="${analytics.staffMembers == null || analytics.staffMembers.isEmpty()}" id="emptyStaffRow">
+                                    <td colspan="4" class="p-8 text-center text-slate-400">
+                                        No staff members assigned to this event yet. Use the form on the left to add crew members.
+                                    </td>
+                                </tr>
+
+                                <tr th:each="s : ${analytics.staffMembers}" th:id="'staffRow-' + ${s.id}" class="hover:bg-slate-50/70 transition">
+                                    <td class="p-3.5">
+                                        <div class="font-extrabold text-slate-900" th:text="${s.fullName}">Staff Name</div>
+                                        <div class="text-[11px] text-slate-400 font-normal" th:text="${s.email}">staff@quickpass.com</div>
+                                    </td>
+                                    <td class="p-3.5">
+                                        <span class="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-amber-100 text-amber-800"
+                                              th:text="${s.role}">ROLE_STAFF</span>
+                                    </td>
+                                    <td class="p-3.5">
+                                        <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 flex items-center space-x-1 w-fit">
+                                            <span>✓</span>
+                                            <span>Authorized Scanner</span>
+                                        </span>
+                                    </td>
+                                    <td class="p-3.5 text-right">
+                                        <button type="button" th:attr="onclick='removeStaffCrewMember(' + ${analytics.eventId} + ', ' + ${s.id} + ')'"
+                                                class="px-2.5 py-1 rounded-lg text-xs font-bold text-rose-600 hover:bg-rose-50 border border-rose-200 transition">
+                                            Remove
+                                        </button>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </section>
+
     </main>
 
     <!-- Footer -->
@@ -1080,6 +1211,138 @@
         function escapeHtml(str) {
             if (!str) return '';
             return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+        }
+
+        // ==================== STAFF & CREW MANAGEMENT ====================
+        async function handleAssignStaff(e) {
+            e.preventDefault();
+            const emailInput = document.getElementById('staffEmailInput');
+            const nameInput = document.getElementById('staffNameInput');
+            const btn = document.getElementById('addStaffBtn');
+            const alertBox = document.getElementById('staffActionAlert');
+
+            const email = emailInput.value.trim();
+            const fullName = nameInput.value.trim();
+            if (!email) return;
+
+            btn.disabled = true;
+            btn.textContent = 'Assigning...';
+
+            try {
+                const res = await fetch(`/api/events/${currentEventId}/staff`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email: email, fullName: fullName })
+                });
+
+                const data = await res.json();
+
+                if (res.ok) {
+                    alertBox.className = 'p-4 rounded-2xl text-xs font-semibold bg-emerald-50 border border-emerald-200 text-emerald-800';
+                    alertBox.textContent = data.message || 'Staff member assigned successfully!';
+                    alertBox.classList.remove('hidden');
+
+                    emailInput.value = '';
+                    nameInput.value = '';
+
+                    // Add or update row in table
+                    const staff = data.staff;
+                    const emptyRow = document.getElementById('emptyStaffRow');
+                    if (emptyRow) emptyRow.remove();
+
+                    let existingRow = document.getElementById(`staffRow-${staff.id}`);
+                    if (!existingRow) {
+                        const tbody = document.getElementById('staffRosterTableBody');
+                        const tr = document.createElement('tr');
+                        tr.id = `staffRow-${staff.id}`;
+                        tr.className = 'hover:bg-slate-50/70 transition';
+                        tr.innerHTML = `
+                            <td class="p-3.5">
+                                <div class="font-extrabold text-slate-900">${escapeHtml(staff.fullName)}</div>
+                                <div class="text-[11px] text-slate-400 font-normal">${escapeHtml(staff.email)}</div>
+                            </td>
+                            <td class="p-3.5">
+                                <span class="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-amber-100 text-amber-800">${escapeHtml(staff.role)}</span>
+                            </td>
+                            <td class="p-3.5">
+                                <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 flex items-center space-x-1 w-fit">
+                                    <span>✓</span>
+                                    <span>Authorized Scanner</span>
+                                </span>
+                            </td>
+                            <td class="p-3.5 text-right">
+                                <button type="button" onclick="removeStaffCrewMember(${currentEventId}, ${staff.id})"
+                                        class="px-2.5 py-1 rounded-lg text-xs font-bold text-rose-600 hover:bg-rose-50 border border-rose-200 transition">
+                                    Remove
+                                </button>
+                            </td>
+                        `;
+                        tbody.appendChild(tr);
+                    }
+
+                    updateStaffCrewBadges();
+                } else {
+                    alertBox.className = 'p-4 rounded-2xl text-xs font-semibold bg-rose-50 border border-rose-200 text-rose-800';
+                    alertBox.textContent = data.error || (data.message ? data.message : 'Failed to assign staff.');
+                    alertBox.classList.remove('hidden');
+                }
+            } catch (err) {
+                alertBox.className = 'p-4 rounded-2xl text-xs font-semibold bg-rose-50 border border-rose-200 text-rose-800';
+                alertBox.textContent = 'Server connection error. Please try again.';
+                alertBox.classList.remove('hidden');
+            } finally {
+                btn.disabled = false;
+                btn.textContent = 'Assign as Event Staff';
+            }
+        }
+
+        async function removeStaffCrewMember(eventId, staffUserId) {
+            if (!confirm('Are you sure you want to remove this staff member from the check-in crew?')) return;
+
+            const alertBox = document.getElementById('staffActionAlert');
+            try {
+                const res = await fetch(`/api/events/${eventId}/staff/${staffUserId}`, {
+                    method: 'DELETE'
+                });
+
+                const data = await res.json();
+                if (res.ok) {
+                    alertBox.className = 'p-4 rounded-2xl text-xs font-semibold bg-amber-50 border border-amber-200 text-amber-800';
+                    alertBox.textContent = data.message || 'Staff member removed from crew.';
+                    alertBox.classList.remove('hidden');
+
+                    const row = document.getElementById(`staffRow-${staffUserId}`);
+                    if (row) row.remove();
+
+                    updateStaffCrewBadges();
+                } else {
+                    alert(data.error || 'Failed to remove staff.');
+                }
+            } catch (err) {
+                alert('Connection error.');
+            }
+        }
+
+        function updateStaffCrewBadges() {
+            const rows = document.querySelectorAll('#staffRosterTableBody tr[id^="staffRow-"]');
+            const count = rows ? rows.length : 0;
+            const badge1 = document.getElementById('staffCrewCountBadge');
+            const badge2 = document.getElementById('staffRosterBadge');
+            if (badge1) badge1.textContent = count;
+            if (badge2) badge2.textContent = count;
+
+            if (count === 0) {
+                const tbody = document.getElementById('staffRosterTableBody');
+                if (tbody && !document.getElementById('emptyStaffRow')) {
+                    tbody.innerHTML = `
+                        <tr id="emptyStaffRow">
+                            <td colspan="4" class="p-8 text-center text-slate-400">
+                                No staff members assigned to this event yet. Use the form on the left to add crew members.
+                            </td>
+                        </tr>
+                    `;
+                }
+            }
         }
 
         async function logoutUser() {

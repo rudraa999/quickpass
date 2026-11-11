@@ -107,5 +107,9 @@ public class BookingService {
         return bookingRepository.findById(bookingId)
                 .orElseThrow(() -> new IllegalArgumentException("Booking not found"));
     }
+
+    public List<Booking> getEventBookings(Long eventId) {
+        return bookingRepository.findByEventIdOrderByBookedAtDesc(eventId);
+    }
 }
 

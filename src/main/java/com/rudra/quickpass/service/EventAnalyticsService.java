@@ -4,6 +4,7 @@ import com.rudra.quickpass.dto.*;
 import com.rudra.quickpass.entity.Booking;
 import com.rudra.quickpass.entity.Event;
 import com.rudra.quickpass.entity.PassType;
+import com.rudra.quickpass.entity.User;
 import com.rudra.quickpass.repository.BookingRepository;
 import com.rudra.quickpass.repository.EventRepository;
 import org.springframework.security.access.AccessDeniedException;
@@ -42,7 +43,7 @@ public class EventAnalyticsService {
         Event event = eventRepository.findById(eventId)
                 .orElseThrow(() -> new IllegalArgumentException("Event not found with ID: " + eventId));
 
-        validateOwnership(event, currentUserId, isAdmin);
+        validateScannerAccess(event, currentUserId, isAdmin);
 
         String cleanCode = extractTicketCode(ticketInput);
         if (cleanCode.isEmpty()) {
@@ -110,7 +111,7 @@ public class EventAnalyticsService {
         Event event = eventRepository.findById(eventId)
                 .orElseThrow(() -> new IllegalArgumentException("Event not found with ID: " + eventId));
 
-        validateOwnership(event, currentUserId, isAdmin);
+        validateScannerAccess(event, currentUserId, isAdmin);
 
         Booking booking = bookingRepository.findById(bookingId)
                 .orElseThrow(() -> new IllegalArgumentException("Booking not found with ID: " + bookingId));
@@ -248,7 +249,27 @@ public class EventAnalyticsService {
         dto.setSoldPercentage(cap > 0 ? ((double) totalSold / cap) * 100.0 : 0.0);
         dto.setCheckInPercentage(totalSold > 0 ? ((double) totalScanned / totalSold) * 100.0 : 0.0);
 
+        // Staff Crew Roster
+        List<StaffMemberDto> staffDtoList = new ArrayList<>();
+        if (event.getStaffMembers() != null) {
+            for (User s : event.getStaffMembers()) {
+                staffDtoList.add(new StaffMemberDto(s.getId(), s.getFullName(), s.getEmail(), s.getRole().name()));
+            }
+        }
+        dto.setStaffMembers(staffDtoList);
+
         return dto;
+    }
+
+    public void validateScannerAccess(Event event, Long currentUserId, boolean isAdmin) {
+        if (isAdmin) return; // Platform admin has universal scanner access
+        if (event.getOrganizer() != null && event.getOrganizer().getId().equals(currentUserId)) {
+            return; // Event organizer has scanner access
+        }
+        if (event.getStaffMembers() != null && event.getStaffMembers().stream().anyMatch(u -> u.getId().equals(currentUserId))) {
+            return; // Assigned staff member has scanner access
+        }
+        throw new AccessDeniedException("Access denied: You are neither the organizer nor an assigned staff member for this event.");
     }
 
     private void validateOwnership(Event event, Long currentUserId, boolean isAdmin) {

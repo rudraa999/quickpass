@@ -46,9 +46,14 @@
                             class="px-3.5 py-2 rounded-xl text-sm font-semibold text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition">
                             My Bookings
                         </a>
-                        <a th:href="@{/organizer}"
+                        <a th:if="${role == 'ROLE_ORGANIZER' || isAdmin}" th:href="@{/organizer}"
                             class="px-3.5 py-2 rounded-xl text-sm font-semibold text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition">
                             Organizer
+                        </a>
+                        <!-- Staff Portal: Visible to Staff, Organizers, and Admins -->
+                        <a th:if="${canAccessStaffPortal}" th:href="@{/staff/events}"
+                            class="px-3.5 py-2 rounded-xl text-sm font-semibold text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition flex items-center space-x-1">
+                            <span>Staff Portal</span>
                         </a>
                         <!-- Admin Portal: Strictly visible ONLY to Main Admin -->
                         <a th:if="${isAdmin}" th:href="@{/admin/events}"

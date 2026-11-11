@@ -1,10 +1,12 @@
 package com.rudra.quickpass.controller;
 
+import com.rudra.quickpass.dto.AddStaffRequest;
 import com.rudra.quickpass.dto.BookPassRequest;
 import com.rudra.quickpass.dto.CreateEventRequest;
 import com.rudra.quickpass.dto.EventAnalyticsDto;
 import com.rudra.quickpass.dto.ScanTicketRequest;
 import com.rudra.quickpass.dto.ScanTicketResponse;
+import com.rudra.quickpass.dto.StaffMemberDto;
 import com.rudra.quickpass.entity.Booking;
 import com.rudra.quickpass.entity.Event;
 import com.rudra.quickpass.entity.Role;
@@ -20,6 +22,7 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 @RestController
@@ -153,6 +156,56 @@ public class EventApiController {
         response.put("bookingId", bookingId);
         response.put("isUsed", isNowUsed);
         response.put("message", isNowUsed ? "Attendee checked in successfully" : "Attendee check-in revoked");
+        return ResponseEntity.ok(response);
+    }
+
+    @PostMapping("/{id}/staff")
+    public ResponseEntity<Map<String, Object>> addStaff(
+            @PathVariable Long id,
+            @Valid @RequestBody AddStaffRequest request,
+            @AuthenticationPrincipal CustomUserDetails userDetails
+    ) {
+        if (userDetails == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+        boolean isAdmin = Role.ROLE_ADMIN.name().equals(userDetails.getRole());
+        StaffMemberDto staffDto = eventService.addStaffToEvent(
+                id, request.getEmail(), request.getFullName(), userDetails.getId(), isAdmin
+        );
+
+        Map<String, Object> response = new HashMap<>();
+        response.put("message", "Staff member " + staffDto.getFullName() + " (" + staffDto.getEmail() + ") assigned to event successfully!");
+        response.put("staff", staffDto);
+        return ResponseEntity.ok(response);
+    }
+
+    @GetMapping("/{id}/staff")
+    public ResponseEntity<List<StaffMemberDto>> getStaff(
+            @PathVariable Long id,
+            @AuthenticationPrincipal CustomUserDetails userDetails
+    ) {
+        if (userDetails == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+        boolean isAdmin = Role.ROLE_ADMIN.name().equals(userDetails.getRole());
+        List<StaffMemberDto> staffList = eventService.getStaffForEvent(id, userDetails.getId(), isAdmin);
+        return ResponseEntity.ok(staffList);
+    }
+
+    @DeleteMapping("/{id}/staff/{userId}")
+    public ResponseEntity<Map<String, String>> removeStaff(
+            @PathVariable Long id,
+            @PathVariable Long userId,
+            @AuthenticationPrincipal CustomUserDetails userDetails
+    ) {
+        if (userDetails == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+        boolean isAdmin = Role.ROLE_ADMIN.name().equals(userDetails.getRole());
+        eventService.removeStaffFromEvent(id, userId, userDetails.getId(), isAdmin);
+
+        Map<String, String> response = new HashMap<>();
+        response.put("message", "Staff member removed from event.");
         return ResponseEntity.ok(response);
     }
 }

@@ -1,0 +1,489 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title th:text="'QuickPass Staff Scanner &bull; ' + ${event.title}">QuickPass &bull; Staff Scanner</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- html5-qrcode for browser camera QR scanning -->
+    <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+    <style>
+        body { font-family: 'Plus Jakarta Sans', sans-serif; }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800 min-h-screen flex flex-col antialiased selection:bg-amber-100 selection:text-amber-800">
+
+    <!-- Top Navigation Bar -->
+    <nav class="bg-white border-b border-slate-200 sticky top-0 z-50 shadow-sm">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-16">
+                <!-- Brand & Back to Staff Events -->
+                <div class="flex items-center space-x-6">
+                    <a th:href="@{/staff/events}" class="flex items-center space-x-2 text-xs font-bold text-slate-500 hover:text-slate-800 transition">
+                        <span>&larr;</span>
+                        <span>Back to Assigned Events</span>
+                    </a>
+                    <span class="text-slate-300">|</span>
+                    <div class="flex items-center space-x-2">
+                        <span class="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-amber-100 text-amber-800 uppercase tracking-wider">
+                            Gate Control
+                        </span>
+                        <h2 class="text-sm font-extrabold text-slate-900 truncate max-w-xs sm:max-w-md" th:text="${event.title}">
+                            Event Name
+                        </h2>
+                    </div>
+                </div>
+
+                <!-- Right Side: Account & Logout -->
+                <div class="flex items-center space-x-3">
+                    <div class="hidden sm:flex items-center space-x-2 px-3 py-1.5 rounded-xl bg-slate-100 text-xs">
+                        <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+                        <span class="font-bold text-slate-700" th:text="${fullName}">Staff User</span>
+                    </div>
+
+                    <button type="button" onclick="logoutUser()"
+                       class="inline-flex items-center space-x-1 px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-rose-50 text-slate-700 hover:text-rose-600 text-xs font-semibold transition border border-slate-200 cursor-pointer">
+                        <span>Logout</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Container -->
+    <main id="staffScannerRoot"
+          th:attr="data-event-id=${event.id}, data-event-title=${event.title}"
+          class="flex-grow max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 w-full space-y-6">
+
+        <!-- Top Logistics & Counters Card -->
+        <div class="bg-white rounded-3xl p-6 border border-slate-200/90 shadow-sm flex flex-col md:flex-row md:items-center md:justify-between gap-6">
+            <div class="space-y-1">
+                <div class="flex items-center space-x-2 text-xs text-slate-400">
+                    <span class="text-rose-500 font-bold">📍</span>
+                    <span th:text="${event.venue}">Venue Name</span>
+                    <span>&bull;</span>
+                    <span th:text="${#temporals.format(event.eventDateTime, 'dd MMM yyyy &bull; hh:mm a')}">Date</span>
+                </div>
+                <h1 class="text-2xl font-black text-slate-900 tracking-tight" th:text="${event.title}">Event Title</h1>
+                <p class="text-xs text-slate-500">Authorized Gate Scanner &bull; Real-time ticket verification</p>
+            </div>
+
+            <!-- Attendance Stats Cards -->
+            <div class="flex flex-wrap items-center gap-3">
+                <div class="px-5 py-3 rounded-2xl bg-emerald-50 border border-emerald-200 text-center">
+                    <span class="text-[10px] font-bold uppercase tracking-wider text-emerald-700 block">Admitted</span>
+                    <span class="text-2xl font-black text-emerald-800">
+                        <span id="staffAdmittedDisplay" th:text="${totalScanned}">0</span> / <span th:text="${totalSold}">0</span>
+                    </span>
+                </div>
+                <div class="px-5 py-3 rounded-2xl bg-amber-50 border border-amber-200 text-center">
+                    <span class="text-[10px] font-bold uppercase tracking-wider text-amber-700 block">Pending Arrival</span>
+                    <span id="staffPendingDisplay" class="text-2xl font-black text-amber-800"
+                          th:text="${totalSold - totalScanned}">0</span>
+                </div>
+                <div class="px-5 py-3 rounded-2xl bg-indigo-50 border border-indigo-200 text-center">
+                    <span class="text-[10px] font-bold uppercase tracking-wider text-indigo-700 block">Gate Velocity</span>
+                    <span class="text-2xl font-black text-indigo-800">
+                        <span id="staffRateDisplay" th:text="${#numbers.formatDecimal(checkInRate, 1, 1)}">0.0</span>%
+                    </span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Scanner Grid: Left Scanner Pane | Right Attendee Manifest -->
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+
+            <!-- LEFT PANE: Scanner Controls & Live Verification -->
+            <div class="lg:col-span-5 space-y-6">
+                <!-- Manual Code & Scanner Input Box -->
+                <div class="bg-white rounded-3xl p-6 border border-slate-200/90 shadow-sm space-y-4">
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center space-x-2">
+                            <div class="w-8 h-8 rounded-xl bg-amber-100 text-amber-800 flex items-center justify-center font-bold text-sm">
+                                📷
+                            </div>
+                            <div>
+                                <h3 class="text-sm font-extrabold text-slate-900">Live Ticket Scanner</h3>
+                                <p class="text-[11px] text-slate-400">Barcode scanner, camera, or code input</p>
+                            </div>
+                        </div>
+
+                        <!-- Camera Toggle Button -->
+                        <button type="button" id="cameraToggleBtn" onclick="toggleCameraScanner()"
+                                class="px-3 py-1.5 rounded-xl text-xs font-bold bg-slate-100 hover:bg-slate-200 text-slate-700 transition flex items-center space-x-1">
+                            <span>📷</span>
+                            <span id="cameraToggleText">Start Camera</span>
+                        </button>
+                    </div>
+
+                    <!-- Camera Viewport (Hidden until toggled) -->
+                    <div id="cameraScannerWrapper" class="hidden rounded-2xl overflow-hidden border border-amber-300 bg-slate-900 relative">
+                        <div id="cameraReader" class="w-full"></div>
+                        <div class="p-2 text-center text-[11px] bg-slate-950/80 text-amber-300 font-medium">
+                            Point camera at attendee QR code
+                        </div>
+                    </div>
+
+                    <!-- Input Form -->
+                    <form onsubmit="handleStaffScan(event)" class="space-y-3">
+                        <div class="relative">
+                            <input type="text" id="staffTicketInput" autofocus autocomplete="off"
+                                   placeholder="e.g. QP-A1B2C3D4 or scan QR code"
+                                   class="w-full px-4 py-3.5 pr-24 rounded-2xl border border-slate-300 focus:ring-2 focus:ring-amber-500 focus:outline-none text-sm font-mono font-bold tracking-wider uppercase text-slate-900 placeholder:normal-case placeholder:font-sans placeholder:font-normal">
+                            <button type="submit" id="staffScanBtn"
+                                    class="absolute right-1.5 top-1.5 bottom-1.5 px-4 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-extrabold text-xs transition shadow-sm">
+                                Verify
+                            </button>
+                        </div>
+                    </form>
+
+                    <!-- Real-Time Scan Result Feedback Box -->
+                    <div id="staffScanResultBox" class="hidden p-4 rounded-2xl text-xs space-y-1 transition"></div>
+                </div>
+
+                <!-- Recent Activity Log -->
+                <div class="bg-white rounded-3xl p-6 border border-slate-200/90 shadow-sm space-y-3">
+                    <h3 class="text-xs font-extrabold text-slate-500 uppercase tracking-wider">Gate Activity Log</h3>
+                    <div id="staffActivityLog" class="space-y-2 max-h-64 overflow-y-auto text-xs">
+                        <p class="text-slate-400 text-center py-4">No passes scanned yet in this gate session.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- RIGHT PANE: Live Attendee Manifest & Search -->
+            <div class="lg:col-span-7 bg-white rounded-3xl border border-slate-200/90 shadow-sm overflow-hidden flex flex-col">
+                <div class="p-5 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                    <div>
+                        <h3 class="text-sm font-extrabold text-slate-900">Event Attendee Manifest</h3>
+                        <p class="text-[11px] text-slate-400">Search attendees and manually check in if required</p>
+                    </div>
+
+                    <!-- Search Input -->
+                    <div class="relative">
+                        <input type="text" id="manifestSearchInput" onkeyup="filterManifestRows()"
+                               placeholder="Search name, email, code..."
+                               class="pl-8 pr-3 py-1.5 rounded-xl border border-slate-200 text-xs focus:ring-2 focus:ring-amber-500 focus:outline-none w-56">
+                        <svg class="w-4 h-4 text-slate-400 absolute left-2.5 top-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+                        </svg>
+                    </div>
+                </div>
+
+                <!-- Manifest Table -->
+                <div class="overflow-x-auto max-h-[550px] overflow-y-auto">
+                    <table class="w-full text-left text-xs text-slate-700">
+                        <thead class="bg-slate-50 sticky top-0 border-b border-slate-200 text-[10px] uppercase font-bold text-slate-500 z-10">
+                            <tr>
+                                <th class="p-3.5">Attendee</th>
+                                <th class="p-3.5">Ticket Code</th>
+                                <th class="p-3.5">Tier & Qty</th>
+                                <th class="p-3.5">Status</th>
+                                <th class="p-3.5 text-right">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="staffAttendeeTableBody" class="divide-y divide-slate-100 font-medium">
+                            <tr th:if="${bookings == null || bookings.isEmpty()}">
+                                <td colspan="5" class="p-8 text-center text-slate-400">
+                                    No attendee bookings for this event yet.
+                                </td>
+                            </tr>
+
+                            <tr th:each="b : ${bookings}"
+                                class="hover:bg-slate-50/70 transition staff-manifest-row"
+                                th:id="'manifestRow-' + ${b.id}"
+                                th:attr="data-search=${#strings.toLowerCase((b.attendee != null ? b.attendee.fullName + ' ' + b.attendee.email : '') + ' ' + b.ticketCode)}, data-code=${b.ticketCode}">
+
+                                <td class="p-3.5">
+                                    <div class="font-extrabold text-slate-900" th:text="${b.attendee != null ? b.attendee.fullName : 'Guest'}">Attendee Name</div>
+                                    <div class="text-[11px] text-slate-400 font-normal" th:text="${b.attendee != null ? b.attendee.email : ''}">email</div>
+                                </td>
+
+                                <td class="p-3.5 font-mono font-bold text-indigo-700" th:text="${b.ticketCode}">
+                                    QP-XXXXXXXX
+                                </td>
+
+                                <td class="p-3.5">
+                                    <span class="px-2 py-0.5 rounded-md text-[10px] font-extrabold uppercase"
+                                          th:classappend="${b.passType.name() == 'VVIP' ? 'bg-purple-100 text-purple-800' : (b.passType.name() == 'VIP' ? 'bg-indigo-100 text-indigo-800' : 'bg-slate-100 text-slate-800')}"
+                                          th:text="${b.passType}">
+                                        VIP
+                                    </span>
+                                    <span class="text-slate-500 font-bold ml-1">&times; <span th:text="${b.quantity}">1</span></span>
+                                </td>
+
+                                <td class="p-3.5" th:id="'staffStatusCell-' + ${b.id}">
+                                    <span th:if="${b.used}" class="px-2.5 py-1 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 flex items-center space-x-1 w-fit">
+                                        <span>✓</span>
+                                        <span>Checked In</span>
+                                    </span>
+                                    <span th:if="${!b.used}" class="px-2.5 py-1 rounded-full text-[10px] font-bold bg-slate-100 text-slate-600 flex items-center space-x-1 w-fit">
+                                        <span>⏳</span>
+                                        <span>Awaiting Entry</span>
+                                    </span>
+                                </td>
+
+                                <td class="p-3.5 text-right" th:id="'staffActionCell-' + ${b.id}">
+                                    <button type="button"
+                                            th:attr="onclick='toggleStaffRowCheckIn(' + ${event.id} + ', ' + ${b.id} + ')'"
+                                            th:classappend="${b.used ? 'bg-slate-100 hover:bg-slate-200 text-slate-700' : 'bg-amber-50 hover:bg-amber-100 text-amber-800'}"
+                                            class="px-2.5 py-1 rounded-lg text-xs font-bold transition">
+                                        <span th:text="${b.used ? 'Undo' : 'Check In'}">Check In</span>
+                                    </button>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+        </div>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="border-t border-slate-200 py-6 text-center text-slate-400 text-xs">
+        QuickPass &bull; Staff Gatekeeper Scanner
+    </footer>
+
+    <!-- Interactive Scanner JavaScript -->
+    <script>
+        const root = document.getElementById('staffScannerRoot');
+        const eventId = root ? root.getAttribute('data-event-id') : '0';
+
+        let html5QrScanner = null;
+        let isCameraRunning = false;
+
+        async function handleStaffScan(e) {
+            if (e) e.preventDefault();
+            const input = document.getElementById('staffTicketInput');
+            const code = input.value.trim();
+            if (!code) return;
+
+            await verifyTicketCode(code);
+            input.value = '';
+            input.focus();
+        }
+
+        async function verifyTicketCode(code) {
+            const btn = document.getElementById('staffScanBtn');
+            const box = document.getElementById('staffScanResultBox');
+            btn.disabled = true;
+            btn.textContent = 'Verifying...';
+            box.classList.remove('hidden');
+
+            try {
+                const res = await fetch(`/api/events/${eventId}/scan`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ ticketCode: code })
+                });
+
+                const data = await res.json();
+
+                if (data.status === 'SUCCESS') {
+                    box.className = 'p-4 rounded-2xl text-xs space-y-1 bg-emerald-50 border border-emerald-300 text-emerald-950 animate-pulse';
+                    box.innerHTML = `
+                        <div class="flex items-center space-x-2 font-black text-sm text-emerald-800">
+                            <span>✓</span>
+                            <span>VALID PASS &bull; CHECKED IN!</span>
+                        </div>
+                        <div><strong>Attendee:</strong> ${escapeHtml(data.attendeeName)} (${escapeHtml(data.attendeeEmail)})</div>
+                        <div><strong>Pass Tier:</strong> ${escapeHtml(data.passType)} &bull; <strong>Quantity:</strong> ${data.quantity} Pass(es)</div>
+                        <div class="text-[11px] text-emerald-700 font-medium pt-1">${escapeHtml(data.message)}</div>
+                    `;
+                    addStaffLogItem(data.ticketCode, data.attendeeName, data.passType, true, 'Admitted');
+                    updateStaffCounters(data.totalTicketsScanned, data.totalTicketsSold, data.checkInPercentage);
+                    updateManifestRowByCode(data.ticketCode, true);
+                } else if (data.status === 'ALREADY_SCANNED') {
+                    box.className = 'p-4 rounded-2xl text-xs space-y-1 bg-amber-50 border border-amber-300 text-amber-950';
+                    box.innerHTML = `
+                        <div class="flex items-center space-x-2 font-black text-sm text-amber-800">
+                            <span>⚠️</span>
+                            <span>WARNING: ALREADY CHECKED IN!</span>
+                        </div>
+                        <div><strong>Attendee:</strong> ${escapeHtml(data.attendeeName || 'Unknown')}</div>
+                        <div><strong>Pass Tier:</strong> ${escapeHtml(data.passType || '')}</div>
+                        <div class="text-[11px] text-amber-800 font-medium pt-1">${escapeHtml(data.message)}</div>
+                    `;
+                    addStaffLogItem(data.ticketCode, data.attendeeName, data.passType, false, 'Duplicate Scan');
+                } else {
+                    box.className = 'p-4 rounded-2xl text-xs space-y-1 bg-rose-50 border border-rose-300 text-rose-950';
+                    box.innerHTML = `
+                        <div class="flex items-center space-x-2 font-black text-sm text-rose-800">
+                            <span>✕</span>
+                            <span>INVALID PASS</span>
+                        </div>
+                        <div class="text-[11px] text-rose-700 font-medium">${escapeHtml(data.message || 'Ticket code not recognized in system.')}</div>
+                    `;
+                    addStaffLogItem(code, 'Unknown', 'N/A', false, 'Invalid Code');
+                }
+            } catch (err) {
+                box.className = 'p-4 rounded-2xl text-xs bg-rose-50 border border-rose-300 text-rose-900';
+                box.textContent = 'Server connection error. Please try again.';
+            } finally {
+                btn.disabled = false;
+                btn.textContent = 'Verify';
+            }
+        }
+
+        function addStaffLogItem(code, name, type, success, label) {
+            const log = document.getElementById('staffActivityLog');
+            if (log.querySelector('p')) {
+                log.innerHTML = '';
+            }
+            const item = document.createElement('div');
+            item.className = `p-2.5 rounded-xl flex items-center justify-between border ${success ? 'bg-emerald-50 border-emerald-100 text-emerald-900' : 'bg-amber-50 border-amber-100 text-amber-900'}`;
+            item.innerHTML = `
+                <div>
+                    <span class="font-mono font-bold">${escapeHtml(code)}</span> &bull; 
+                    <span>${escapeHtml(name)}</span>
+                </div>
+                <span class="text-[10px] font-extrabold uppercase">${label}</span>
+            `;
+            log.prepend(item);
+        }
+
+        function updateStaffCounters(scanned, totalSold, rate) {
+            document.getElementById('staffAdmittedDisplay').textContent = scanned;
+            document.getElementById('staffPendingDisplay').textContent = Math.max(0, totalSold - scanned);
+            document.getElementById('staffRateDisplay').textContent = (rate || 0).toFixed(1);
+        }
+
+        function updateManifestRowByCode(code, isCheckedIn) {
+            document.querySelectorAll('.staff-manifest-row').forEach(row => {
+                if (row.getAttribute('data-code') === code) {
+                    const rowId = row.id.replace('manifestRow-', '');
+                    const statusCell = document.getElementById(`staffStatusCell-${rowId}`);
+                    const actionCell = document.getElementById(`staffActionCell-${rowId}`);
+
+                    if (isCheckedIn) {
+                        if (statusCell) {
+                            statusCell.innerHTML = `
+                                <span class="px-2.5 py-1 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 flex items-center space-x-1 w-fit">
+                                    <span>✓</span>
+                                    <span>Checked In</span>
+                                </span>
+                            `;
+                        }
+                        if (actionCell) {
+                            actionCell.innerHTML = `
+                                <button type="button" onclick="toggleStaffRowCheckIn(${eventId}, ${rowId})"
+                                        class="px-2.5 py-1 rounded-lg text-xs font-bold transition bg-slate-100 hover:bg-slate-200 text-slate-700">
+                                    Undo
+                                </button>
+                            `;
+                        }
+                    }
+                }
+            });
+        }
+
+        async function toggleStaffRowCheckIn(evId, bookingId) {
+            try {
+                const res = await fetch(`/api/events/${evId}/bookings/${bookingId}/toggle-scan`, { method: 'POST' });
+                if (!res.ok) throw new Error('Toggle failed');
+                const data = await res.json();
+
+                const statusCell = document.getElementById(`staffStatusCell-${bookingId}`);
+                const actionCell = document.getElementById(`staffActionCell-${bookingId}`);
+
+                if (data.isUsed) {
+                    statusCell.innerHTML = `
+                        <span class="px-2.5 py-1 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 flex items-center space-x-1 w-fit">
+                            <span>✓</span>
+                            <span>Checked In</span>
+                        </span>
+                    `;
+                    actionCell.innerHTML = `
+                        <button type="button" onclick="toggleStaffRowCheckIn(${evId}, ${bookingId})"
+                                class="px-2.5 py-1 rounded-lg text-xs font-bold transition bg-slate-100 hover:bg-slate-200 text-slate-700">
+                            Undo
+                        </button>
+                    `;
+                } else {
+                    statusCell.innerHTML = `
+                        <span class="px-2.5 py-1 rounded-full text-[10px] font-bold bg-slate-100 text-slate-600 flex items-center space-x-1 w-fit">
+                            <span>⏳</span>
+                            <span>Awaiting Entry</span>
+                        </span>
+                    `;
+                    actionCell.innerHTML = `
+                        <button type="button" onclick="toggleStaffRowCheckIn(${evId}, ${bookingId})"
+                                class="px-2.5 py-1 rounded-lg text-xs font-bold transition bg-amber-50 hover:bg-amber-100 text-amber-800">
+                            Check In
+                        </button>
+                    `;
+                }
+            } catch (err) {
+                alert('Could not update status: ' + err.message);
+            }
+        }
+
+        function filterManifestRows() {
+            const query = document.getElementById('manifestSearchInput').value.toLowerCase().trim();
+            document.querySelectorAll('.staff-manifest-row').forEach(row => {
+                const text = row.getAttribute('data-search') || '';
+                row.style.display = text.includes(query) ? '' : 'none';
+            });
+        }
+
+        function toggleCameraScanner() {
+            const wrapper = document.getElementById('cameraScannerWrapper');
+            const btnText = document.getElementById('cameraToggleText');
+
+            if (!isCameraRunning) {
+                wrapper.classList.remove('hidden');
+                btnText.textContent = 'Stop Camera';
+                isCameraRunning = true;
+
+                if (!html5QrScanner) {
+                    html5QrScanner = new Html5Qrcode("cameraReader");
+                }
+
+                html5QrScanner.start(
+                    { facingMode: "environment" },
+                    { fps: 10, qrbox: { width: 250, height: 250 } },
+                    (decodedText) => {
+                        verifyTicketCode(decodedText);
+                    },
+                    (error) => {
+                        // ignore continuous scan misses
+                    }
+                ).catch(err => {
+                    alert('Camera could not be started: ' + err);
+                    wrapper.classList.add('hidden');
+                    btnText.textContent = 'Start Camera';
+                    isCameraRunning = false;
+                });
+            } else {
+                if (html5QrScanner) {
+                    html5QrScanner.stop().then(() => {
+                        wrapper.classList.add('hidden');
+                        btnText.textContent = 'Start Camera';
+                        isCameraRunning = false;
+                    });
+                }
+            }
+        }
+
+        function escapeHtml(str) {
+            if (!str) return '';
+            return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+        }
+
+        async function logoutUser() {
+            try {
+                localStorage.removeItem('quickpass_token');
+                await fetch('/api/auth/logout', { method: 'POST' });
+            } catch (err) {
+                console.error(err);
+            } finally {
+                window.location.href = '/login?logout';
+            }
+        }
+    </script>
+</body>
+</html>
+
