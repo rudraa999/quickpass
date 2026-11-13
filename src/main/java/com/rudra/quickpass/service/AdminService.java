@@ -3,14 +3,8 @@ package com.rudra.quickpass.service;
 import com.rudra.quickpass.dto.AdminBookingDto;
 import com.rudra.quickpass.dto.AdminDashboardStatsDto;
 import com.rudra.quickpass.dto.AdminUserDto;
-import com.rudra.quickpass.entity.Booking;
-import com.rudra.quickpass.entity.Event;
-import com.rudra.quickpass.entity.EventStatus;
-import com.rudra.quickpass.entity.Role;
-import com.rudra.quickpass.entity.User;
-import com.rudra.quickpass.repository.BookingRepository;
-import com.rudra.quickpass.repository.EventRepository;
-import com.rudra.quickpass.repository.UserRepository;
+import com.rudra.quickpass.entity.*;
+import com.rudra.quickpass.repository.*;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -25,6 +19,7 @@ public class AdminService {
 
     private final EventRepository eventRepository;
     private final BookingRepository bookingRepository;
+    private final TicketRepository ticketRepository;
     private final UserRepository userRepository;
     private final EventService eventService;
 
@@ -32,11 +27,13 @@ public class AdminService {
     private String rootAdminEmail;
 
     public AdminService(EventRepository eventRepository,
-            BookingRepository bookingRepository,
-            UserRepository userRepository,
-            EventService eventService) {
+                        BookingRepository bookingRepository,
+                        TicketRepository ticketRepository,
+                        UserRepository userRepository,
+                        EventService eventService) {
         this.eventRepository = eventRepository;
         this.bookingRepository = bookingRepository;
+        this.ticketRepository = ticketRepository;
         this.userRepository = userRepository;
         this.eventService = eventService;
     }
@@ -47,18 +44,14 @@ public class AdminService {
 
         List<Booking> allBookings = bookingRepository.findAll();
         BigDecimal totalRevenue = BigDecimal.ZERO;
-        int totalTicketsSold = 0;
-        int totalScanned = 0;
-
         for (Booking b : allBookings) {
             if (b.getTotalAmount() != null) {
                 totalRevenue = totalRevenue.add(b.getTotalAmount());
             }
-            totalTicketsSold += b.getQuantity();
-            if (b.isUsed()) {
-                totalScanned += b.getQuantity();
-            }
         }
+
+        int totalTicketsSold = (int) ticketRepository.count();
+        int totalScanned = (int) ticketRepository.countByIsUsedTrue();
 
         stats.setTotalGrossRevenue(totalRevenue);
         stats.setTotalTicketsSold(totalTicketsSold);
@@ -101,9 +94,9 @@ public class AdminService {
         List<AdminUserDto> dtos = new ArrayList<>(users.size());
 
         for (User u : users) {
-            long eventsCount = eventRepository.findByOrganizerIdOrderByCreatedAtDesc(u.getId()).size();
+            long eventsCount = eventRepository.countByOrganizerId(u.getId());
             long bookingsCount = bookingRepository.countByAttendeeId(u.getId());
-            boolean isRoot = u.getEmail() != null && u.getEmail().equalsIgnoreCase(rootAdminEmail);
+            boolean isRoot = rootAdminEmail.equalsIgnoreCase(u.getEmail());
 
             dtos.add(new AdminUserDto(
                     u.getId(),
@@ -119,33 +112,53 @@ public class AdminService {
         return dtos;
     }
 
-    @Transactional(readOnly = true)
     public List<AdminBookingDto> getAllBookings() {
-        List<Booking> bookings = bookingRepository.findAllByOrderByBookedAtDesc();
-        List<AdminBookingDto> dtos = new ArrayList<>(bookings.size());
+        return getMasterLedger();
+    }
 
-        for (Booking b : bookings) {
-            Long eventId = b.getEvent() != null ? b.getEvent().getId() : null;
-            String eventTitle = b.getEvent() != null ? b.getEvent().getTitle() : "N/A";
-            Long attendeeId = b.getAttendee() != null ? b.getAttendee().getId() : null;
-            String attendeeName = b.getAttendee() != null ? b.getAttendee().getFullName() : "Unknown";
-            String attendeeEmail = b.getAttendee() != null ? b.getAttendee().getEmail() : "N/A";
+    @Transactional(readOnly = true)
+    public List<AdminBookingDto> getMasterLedger() {
+        List<Ticket> tickets = ticketRepository.findAll();
+        List<AdminBookingDto> dtos = new ArrayList<>(tickets.size());
 
-            dtos.add(new AdminBookingDto(
-                    b.getId(),
-                    b.getTicketCode(),
+        for (Ticket t : tickets) {
+            Booking b = t.getBooking();
+            Event e = t.getEvent();
+            User attendee = b != null ? b.getAttendee() : null;
+
+            Long eventId = e != null ? e.getId() : null;
+            String eventTitle = e != null ? e.getTitle() : "N/A";
+            Long attendeeId = attendee != null ? attendee.getId() : null;
+            String attendeeName = t.getAttendeeName() != null ? t.getAttendeeName() : (attendee != null ? attendee.getFullName() : "Unknown");
+            String attendeeEmail = attendee != null ? attendee.getEmail() : "N/A";
+            String tierName = t.getTicketTier() != null ? t.getTicketTier().getName() : "Standard";
+            BigDecimal unitPrice = t.getTicketTier() != null ? t.getTicketTier().getPrice() : BigDecimal.ZERO;
+
+            PassType passType = PassType.NORMAL;
+            if (tierName != null) {
+                if (tierName.toUpperCase().contains("VVIP")) passType = PassType.VVIP;
+                else if (tierName.toUpperCase().contains("VIP")) passType = PassType.VIP;
+            }
+
+            AdminBookingDto dto = new AdminBookingDto(
+                    b != null ? b.getId() : t.getId(),
+                    t.getTicketCode(),
                     eventId,
                     eventTitle,
                     attendeeId,
                     attendeeName,
                     attendeeEmail,
-                    b.getPassType(),
-                    b.getQuantity(),
-                    b.getUnitPrice(),
-                    b.getTotalAmount(),
-                    b.isUsed(),
-                    b.getScannedAt(),
-                    b.getBookedAt()));
+                    passType,
+                    1,
+                    unitPrice,
+                    unitPrice,
+                    t.isUsed(),
+                    t.getScannedAt(),
+                    b != null ? b.getBookedAt() : null);
+            dto.setOrderNumber(b != null ? b.getOrderNumber() : "ORD-" + t.getId());
+            dto.setTierName(tierName);
+            dto.setScannedByName(t.getScannedBy() != null ? t.getScannedBy().getFullName() : null);
+            dtos.add(dto);
         }
 
         return dtos;
@@ -191,30 +204,40 @@ public class AdminService {
     }
 
     @Transactional
-    public User updateUserRole(Long targetUserId, Role newRole, Long currentAdminId) {
-        User targetUser = userRepository.findById(targetUserId)
-                .orElseThrow(() -> new IllegalArgumentException("User not found with ID: " + targetUserId));
+    public User updateUserRole(Long userId, Role newRole, Long currentAdminId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new IllegalArgumentException("User not found with ID: " + userId));
 
-        if (targetUser.getEmail() != null && targetUser.getEmail().equalsIgnoreCase(rootAdminEmail)) {
-            throw new IllegalArgumentException("The primary root administrator role cannot be altered.");
+        if (rootAdminEmail.equalsIgnoreCase(user.getEmail()) && newRole != Role.ROLE_ADMIN) {
+            throw new IllegalArgumentException("Root administrator account role cannot be revoked.");
         }
 
-        if (targetUser.getId().equals(currentAdminId) && newRole != Role.ROLE_ADMIN) {
+        if (user.getId().equals(currentAdminId) && newRole != Role.ROLE_ADMIN) {
             throw new IllegalArgumentException("You cannot revoke your own administrator privileges.");
         }
 
-        targetUser.setRole(newRole);
-        return userRepository.save(targetUser);
+        user.setRole(newRole);
+        return userRepository.save(user);
     }
 
     @Transactional
-    public Booking toggleBookingCheckIn(Long bookingId) {
-        Booking booking = bookingRepository.findById(bookingId)
-                .orElseThrow(() -> new IllegalArgumentException("Booking not found with ID: " + bookingId));
+    public Ticket toggleBookingCheckIn(Long ticketId, Long adminUserId) {
+        Ticket ticket = ticketRepository.findById(ticketId)
+                .orElseThrow(() -> new IllegalArgumentException("Ticket not found with ID: " + ticketId));
 
-        boolean nextState = !booking.isUsed();
-        booking.setUsed(nextState);
-        booking.setScannedAt(nextState ? LocalDateTime.now() : null);
-        return bookingRepository.save(booking);
+        boolean nextState = !ticket.isUsed();
+        ticket.setUsed(nextState);
+        ticket.setScannedAt(nextState ? LocalDateTime.now() : null);
+        if (nextState && adminUserId != null) {
+            userRepository.findById(adminUserId).ifPresent(ticket::setScannedBy);
+        } else if (!nextState) {
+            ticket.setScannedBy(null);
+        }
+        return ticketRepository.save(ticket);
+    }
+
+    @Transactional
+    public Ticket toggleBookingCheckIn(Long ticketId) {
+        return toggleBookingCheckIn(ticketId, null);
     }
 }

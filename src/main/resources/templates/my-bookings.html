@@ -137,87 +137,107 @@
         </div>
 
         <!-- Bookings Cards -->
-        <div th:if="${bookings != null && !bookings.isEmpty()}" class="space-y-6">
+        <div th:if="${bookings != null && !bookings.isEmpty()}" class="space-y-8">
             <div th:each="booking : ${bookings}"
-                class="bg-white rounded-2xl border border-slate-200/90 p-6 sm:p-8 shadow-sm flex flex-col md:flex-row items-center justify-between gap-8">
+                class="bg-white rounded-2xl border border-slate-200/90 p-6 sm:p-8 shadow-sm flex flex-col space-y-6">
 
-                <!-- Left Details -->
-                <div class="space-y-3 flex-1 w-full">
-                    <div class="flex items-center space-x-2.5">
-                        <!-- Pass Type Badge -->
-                        <span th:if="${booking.passType.name() == 'NORMAL'}"
-                            class="px-3 py-1 rounded-lg text-xs font-bold bg-slate-100 text-slate-800 border border-slate-200">
-                            Normal Pass
-                        </span>
-                        <span th:if="${booking.passType.name() == 'VIP'}"
-                            class="px-3 py-1 rounded-lg text-xs font-bold bg-indigo-50 text-indigo-700 border border-indigo-200">
-                            VIP Priority Pass
-                        </span>
-                        <span th:if="${booking.passType.name() == 'VVIP'}"
-                            class="px-3 py-1 rounded-lg text-xs font-bold bg-purple-50 text-purple-700 border border-purple-200">
-                            VVIP All Access Pass
-                        </span>
-
-                        <span class="text-xs font-mono font-bold text-slate-400">
-                            Code: <span class="text-slate-800 font-extrabold"
-                                th:text="${booking.ticketCode}">QP-XXXXXX</span>
-                        </span>
-                    </div>
-
-                    <!-- Event Title -->
-                    <h2 class="text-2xl font-extrabold text-slate-900 tracking-tight" th:text="${booking.event.title}">
-                        Event Name
-                    </h2>
-
-                    <!-- Venue & Date -->
-                    <div class="space-y-1 text-sm text-slate-600">
-                        <div class="flex items-center space-x-2">
-                            <svg class="w-4 h-4 text-rose-500 shrink-0" fill="none" stroke="currentColor"
-                                viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                    d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                    d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                            </svg>
-                            <span th:text="${booking.event.venue}">Venue Address</span>
+                <!-- Order Header Row -->
+                <div class="flex flex-col md:flex-row md:items-center justify-between pb-4 border-b border-slate-100 gap-4">
+                    <div>
+                        <div class="flex items-center space-x-3 mb-1">
+                            <span class="px-3 py-1 rounded-lg text-xs font-bold bg-indigo-50 text-indigo-700 border border-indigo-200"
+                                th:text="${booking.orderNumber != null ? booking.orderNumber : 'ORD-' + booking.id}">
+                                ORD-2026-0001
+                            </span>
+                            <span class="text-xs text-slate-400 font-medium"
+                                th:text="${#temporals.format(booking.bookedAt, 'dd MMMM yyyy &bull; hh:mm a')}">
+                                Order Date
+                            </span>
                         </div>
-                        <div class="flex items-center space-x-2">
-                            <svg class="w-4 h-4 text-indigo-500 shrink-0" fill="none" stroke="currentColor"
-                                viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                    d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                            </svg>
-                            <span
-                                th:text="${#temporals.format(booking.event.eventDateTime, 'EEEE, dd MMMM yyyy &bull; hh:mm a')}">Event
-                                Date</span>
+                        <h2 class="text-2xl font-extrabold text-slate-900 tracking-tight" th:text="${booking.event.title}">
+                            Event Name
+                        </h2>
+                        <div class="flex flex-wrap items-center gap-4 text-xs text-slate-600 mt-2">
+                            <span class="flex items-center space-x-1">
+                                <svg class="w-4 h-4 text-rose-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                                </svg>
+                                <span th:text="${booking.event.venue}">Venue Address</span>
+                            </span>
+                            <span class="flex items-center space-x-1">
+                                <svg class="w-4 h-4 text-indigo-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                </svg>
+                                <span th:text="${#temporals.format(booking.event.eventDateTime, 'EEEE, dd MMMM yyyy &bull; hh:mm a')}">Event Date</span>
+                            </span>
                         </div>
                     </div>
 
-                    <!-- Summary details -->
-                    <div class="pt-3 border-t border-slate-100 flex items-center space-x-6 text-xs text-slate-500">
+                    <!-- Order Total Badge -->
+                    <div class="flex items-center space-x-6 text-right shrink-0">
                         <div>
-                            Passes: <strong class="text-slate-800 text-sm" th:text="${booking.quantity}">1</strong>
+                            <span class="block text-[11px] font-bold uppercase tracking-wider text-slate-400">Total Paid</span>
+                            <span class="text-xl font-extrabold text-emerald-600">$<span th:text="${booking.totalAmount}">0.00</span></span>
                         </div>
-                        <div>
-                            Total Paid: <strong class="text-indigo-600 text-sm">$<span
-                                    th:text="${booking.totalAmount}">49.00</span></strong>
-                        </div>
-                        <div>
-                            Purchased: <span th:text="${#temporals.format(booking.bookedAt, 'dd MMM yyyy')}">Date</span>
+                        <div class="border-l border-slate-200 pl-4">
+                            <span class="block text-[11px] font-bold uppercase tracking-wider text-slate-400">Passes</span>
+                            <span class="text-xl font-extrabold text-slate-800" th:text="${booking.totalQuantity != null ? booking.totalQuantity : booking.quantity}">1</span>
                         </div>
                     </div>
                 </div>
 
-                <!-- Right QR Code & Actions -->
-                <div
-                    class="flex flex-col items-center justify-center p-4 rounded-2xl bg-slate-50 border border-slate-200 shrink-0">
-                    <img th:src="${booking.qrCodeBase64}" alt="Pass QR Code"
-                        class="w-44 h-44 rounded-xl shadow-sm bg-white p-2">
-                    <span class="mt-2 text-[11px] font-mono font-bold text-slate-500"
-                        th:text="${booking.ticketCode}">QP-123456</span>
+                <!-- Individual Issued Tickets Grid -->
+                <div>
+                    <h3 class="text-xs font-bold uppercase tracking-wider text-slate-400 mb-3">Individual Scannable Passes</h3>
+                    
+                    <!-- If multiple tickets or single ticket present -->
+                    <div th:if="${booking.tickets != null && !booking.tickets.isEmpty()}" 
+                        class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        <div th:each="t, iter : ${booking.tickets}" 
+                            class="p-4 rounded-xl border border-slate-200 bg-slate-50/70 hover:bg-white hover:shadow-md transition flex flex-col justify-between space-y-3">
+                            <div class="flex items-start justify-between">
+                                <div>
+                                    <span class="px-2.5 py-0.5 rounded-md text-[11px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-200"
+                                        th:text="${t.ticketTier != null ? t.ticketTier.name : 'Pass'}">Tier</span>
+                                    <h4 class="text-sm font-bold text-slate-900 mt-1.5" th:text="${t.attendeeName}">Attendee Name</h4>
+                                    <span class="text-[11px] font-mono text-slate-500 font-semibold" th:text="${t.ticketCode}">QP-123456</span>
+                                </div>
+                                <!-- Entry Status Pill -->
+                                <div>
+                                    <span th:if="${t.isUsed}" class="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-emerald-100 text-emerald-800 border border-emerald-300 flex items-center space-x-1">
+                                        <span>&#10003; Checked In</span>
+                                    </span>
+                                    <span th:unless="${t.isUsed}" class="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-amber-50 text-amber-700 border border-amber-200">
+                                        Valid for Gate
+                                    </span>
+                                </div>
+                            </div>
 
-                    <button type="button" onclick="window.print()"
-                        class="no-print mt-3 px-3 py-1.5 rounded-lg bg-white border border-slate-200 text-slate-700 hover:bg-slate-100 text-xs font-semibold shadow-sm transition flex items-center space-x-1">
+                            <div class="flex items-center justify-center py-2 bg-white rounded-lg border border-slate-100">
+                                <img th:src="${t.qrCodeBase64}" alt="Ticket QR" class="w-32 h-32 object-contain">
+                            </div>
+
+                            <div class="flex items-center justify-between text-[11px] text-slate-400 pt-1 border-t border-slate-100">
+                                <span>Ticket <span th:text="${iter.count}">1</span> of <span th:text="${booking.tickets.size()}">1</span></span>
+                                <button type="button" onclick="window.print()" class="no-print font-bold text-indigo-600 hover:text-indigo-800 transition">Print Pass &rarr;</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Fallback if booking only has legacy single ticket -->
+                    <div th:unless="${booking.tickets != null && !booking.tickets.isEmpty()}" 
+                        class="p-4 rounded-xl border border-slate-200 bg-slate-50 flex items-center justify-between">
+                        <div class="space-y-1">
+                            <span class="px-2.5 py-0.5 rounded-md text-xs font-bold bg-slate-200 text-slate-800" th:text="${booking.passType}">Pass</span>
+                            <div class="font-bold text-sm text-slate-800" th:text="${booking.attendee.fullName}">Attendee Name</div>
+                            <span class="text-xs font-mono font-bold text-slate-500" th:text="${booking.ticketCode}">QP-XXXXXX</span>
+                        </div>
+                        <img th:src="${booking.qrCodeBase64}" alt="QR" class="w-24 h-24 bg-white p-1 rounded-lg border border-slate-200">
+                    </div>
+                </div>
+            </div>
+        </div>
                         <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                 d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />

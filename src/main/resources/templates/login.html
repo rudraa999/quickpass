@@ -102,7 +102,7 @@
                         <svg class="w-4 h-4 shrink-0 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
                         </svg>
-                        <span>Login successful! Redirecting to dashboard...</span>
+                        <span>Login successful! Redirecting to your workspace...</span>
                     `;
                     alertBox.classList.remove('hidden');
 
@@ -110,9 +110,24 @@
                         localStorage.setItem('quickpass_token', data.token);
                     }
 
+                    // Smart role-based & deep-link redirect
+                    let targetUrl = '/dashboard';
+                    const urlParams = new URLSearchParams(window.location.search);
+                    const redirectParam = urlParams.get('redirect');
+
+                    if (redirectParam && redirectParam.startsWith('/') && !redirectParam.startsWith('//')) {
+                        targetUrl = redirectParam;
+                    } else if (data.role === 'ROLE_ADMIN') {
+                        targetUrl = '/admin';
+                    } else if (data.role === 'ROLE_STAFF') {
+                        targetUrl = '/staff/events';
+                    } else if (data.role === 'ROLE_ORGANIZER') {
+                        targetUrl = '/organizer';
+                    }
+
                     setTimeout(() => {
-                        window.location.href = '/dashboard';
-                    }, 800);
+                        window.location.href = targetUrl;
+                    }, 500);
                 } else {
                     let errMsg = data.error || (data.message ? data.message : 'Invalid email or password');
                     if (!data.error && !data.message && typeof data === 'object') {

@@ -9,6 +9,8 @@ public class ScanTicketResponse {
     private String attendeeName;
     private String attendeeEmail;
     private String passType;
+    private String tierName;
+    private String scannedByName;
     private int quantity;
     private String eventTitle;
     private LocalDateTime scannedAt;
@@ -20,8 +22,8 @@ public class ScanTicketResponse {
     }
 
     public static ScanTicketResponse success(String message, String ticketCode, String attendeeName,
-                                            String attendeeEmail, String passType, int quantity,
-                                            String eventTitle, LocalDateTime scannedAt,
+                                            String attendeeEmail, String tierName, int quantity,
+                                            String eventTitle, LocalDateTime scannedAt, String scannedByName,
                                             int totalTicketsScanned, int totalTicketsSold) {
         ScanTicketResponse res = new ScanTicketResponse();
         res.setStatus("SUCCESS");
@@ -29,7 +31,38 @@ public class ScanTicketResponse {
         res.setTicketCode(ticketCode);
         res.setAttendeeName(attendeeName);
         res.setAttendeeEmail(attendeeEmail);
-        res.setPassType(passType);
+        res.setTierName(tierName);
+        res.setPassType(tierName);
+        res.setScannedByName(scannedByName);
+        res.setQuantity(quantity);
+        res.setEventTitle(eventTitle);
+        res.setScannedAt(scannedAt);
+        res.setTotalTicketsScanned(totalTicketsScanned);
+        res.setTotalTicketsSold(totalTicketsSold);
+        res.setCheckInPercentage(totalTicketsSold > 0 ? ((double) totalTicketsScanned / totalTicketsSold) * 100.0 : 0.0);
+        return res;
+    }
+
+    public static ScanTicketResponse success(String message, String ticketCode, String attendeeName,
+                                            String attendeeEmail, String passType, int quantity,
+                                            String eventTitle, LocalDateTime scannedAt,
+                                            int totalTicketsScanned, int totalTicketsSold) {
+        return success(message, ticketCode, attendeeName, attendeeEmail, passType, quantity, eventTitle, scannedAt, null, totalTicketsScanned, totalTicketsSold);
+    }
+
+    public static ScanTicketResponse alreadyScanned(String message, String ticketCode, String attendeeName,
+                                                   String attendeeEmail, String tierName, int quantity,
+                                                   String eventTitle, LocalDateTime scannedAt, String scannedByName,
+                                                   int totalTicketsScanned, int totalTicketsSold) {
+        ScanTicketResponse res = new ScanTicketResponse();
+        res.setStatus("ALREADY_SCANNED");
+        res.setMessage(message);
+        res.setTicketCode(ticketCode);
+        res.setAttendeeName(attendeeName);
+        res.setAttendeeEmail(attendeeEmail);
+        res.setTierName(tierName);
+        res.setPassType(tierName);
+        res.setScannedByName(scannedByName);
         res.setQuantity(quantity);
         res.setEventTitle(eventTitle);
         res.setScannedAt(scannedAt);
@@ -43,27 +76,19 @@ public class ScanTicketResponse {
                                                    String attendeeEmail, String passType, int quantity,
                                                    String eventTitle, LocalDateTime scannedAt,
                                                    int totalTicketsScanned, int totalTicketsSold) {
+        return alreadyScanned(message, ticketCode, attendeeName, attendeeEmail, passType, quantity, eventTitle, scannedAt, null, totalTicketsScanned, totalTicketsSold);
+    }
+
+    public static ScanTicketResponse invalid(String message, String ticketCode) {
         ScanTicketResponse res = new ScanTicketResponse();
-        res.setStatus("ALREADY_SCANNED");
+        res.setStatus("INVALID");
         res.setMessage(message);
         res.setTicketCode(ticketCode);
-        res.setAttendeeName(attendeeName);
-        res.setAttendeeEmail(attendeeEmail);
-        res.setPassType(passType);
-        res.setQuantity(quantity);
-        res.setEventTitle(eventTitle);
-        res.setScannedAt(scannedAt);
-        res.setTotalTicketsScanned(totalTicketsScanned);
-        res.setTotalTicketsSold(totalTicketsSold);
-        res.setCheckInPercentage(totalTicketsSold > 0 ? ((double) totalTicketsScanned / totalTicketsSold) * 100.0 : 0.0);
         return res;
     }
 
     public static ScanTicketResponse invalid(String message) {
-        ScanTicketResponse res = new ScanTicketResponse();
-        res.setStatus("INVALID");
-        res.setMessage(message);
-        return res;
+        return invalid(message, null);
     }
 
     public String getStatus() {
@@ -107,11 +132,27 @@ public class ScanTicketResponse {
     }
 
     public String getPassType() {
-        return passType;
+        return passType != null ? passType : tierName;
     }
 
     public void setPassType(String passType) {
         this.passType = passType;
+    }
+
+    public String getTierName() {
+        return tierName != null ? tierName : passType;
+    }
+
+    public void setTierName(String tierName) {
+        this.tierName = tierName;
+    }
+
+    public String getScannedByName() {
+        return scannedByName;
+    }
+
+    public void setScannedByName(String scannedByName) {
+        this.scannedByName = scannedByName;
     }
 
     public int getQuantity() {
@@ -162,4 +203,3 @@ public class ScanTicketResponse {
         this.checkInPercentage = checkInPercentage;
     }
 }
-

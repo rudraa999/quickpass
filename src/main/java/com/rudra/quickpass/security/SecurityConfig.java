@@ -1,5 +1,6 @@
 package com.rudra.quickpass.security;
 
+import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -58,16 +59,18 @@ public class SecurityConfig {
                                 "/login",
                                 "/register",
                                 "/logout",
+                                "/error",
+                                "/favicon.ico",
                                 "/api/auth/**",
                                 "/css/**",
                                 "/js/**",
                                 "/images/**")
                         .permitAll()
                         // Only users with ROLE_ADMIN can access admin endpoints
-                        .requestMatchers("/admin/**", "/api/admin/**", "/api/events/*/approve", "/api/events/*/reject")
+                        .requestMatchers("/admin", "/admin/**", "/api/admin/**", "/api/events/*/approve", "/api/events/*/reject")
                         .hasAuthority("ROLE_ADMIN")
                         // Staff endpoints accessible by ROLE_STAFF, ROLE_ORGANIZER, and ROLE_ADMIN
-                        .requestMatchers("/staff/**", "/api/staff/**")
+                        .requestMatchers("/staff", "/staff/**", "/api/staff/**")
                         .hasAnyAuthority("ROLE_STAFF", "ROLE_ORGANIZER", "ROLE_ADMIN")
                         .anyRequest().authenticated())
                 .logout(logout -> logout
@@ -76,6 +79,18 @@ public class SecurityConfig {
                         .deleteCookies("quickpass_token")
                         .clearAuthentication(true)
                         .permitAll())
+                .exceptionHandling(ex -> ex
+                        .authenticationEntryPoint((request, response, authException) -> {
+                            String uri = request.getRequestURI();
+                            if (uri.startsWith("/api/")) {
+                                response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Unauthorized");
+                            } else {
+                                String q = request.getQueryString();
+                                String fullPath = q != null ? uri + "?" + q : uri;
+                                response.sendRedirect("/login?redirect=" + fullPath);
+                            }
+                        })
+                )
                 .authenticationProvider(authenticationProvider())
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 

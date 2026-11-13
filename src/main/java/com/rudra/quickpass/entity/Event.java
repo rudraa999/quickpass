@@ -3,7 +3,9 @@ package com.rudra.quickpass.entity;
 import jakarta.persistence.*;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 
 @Entity
@@ -34,24 +36,6 @@ public class Event {
     @Column(nullable = false)
     private LocalDateTime bookingEndDate;
 
-    // Normal Pass Tier
-    @Column(nullable = false)
-    private BigDecimal normalPrice = BigDecimal.ZERO;
-    private int normalCapacity = 0;
-    private int normalAvailable = 0;
-
-    // VIP Pass Tier
-    @Column(nullable = false)
-    private BigDecimal vipPrice = BigDecimal.ZERO;
-    private int vipCapacity = 0;
-    private int vipAvailable = 0;
-
-    // VVIP Pass Tier
-    @Column(nullable = false)
-    private BigDecimal vvipPrice = BigDecimal.ZERO;
-    private int vvipCapacity = 0;
-    private int vvipAvailable = 0;
-
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private EventStatus status = EventStatus.PENDING_APPROVAL;
@@ -68,6 +52,10 @@ public class Event {
     )
     private Set<User> staffMembers = new HashSet<>();
 
+    @OneToMany(mappedBy = "event", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OrderBy("id ASC")
+    private List<TicketTier> tiers = new ArrayList<>();
+
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
@@ -83,11 +71,109 @@ public class Event {
     }
 
     public int getTotalAvailablePasses() {
-        return normalAvailable + vipAvailable + vvipAvailable;
+        if (tiers != null && !tiers.isEmpty()) {
+            return tiers.stream().mapToInt(TicketTier::getAvailableCapacity).sum();
+        }
+        return 0;
     }
 
     public int getTotalCapacity() {
-        return normalCapacity + vipCapacity + vvipCapacity;
+        if (tiers != null && !tiers.isEmpty()) {
+            return tiers.stream().mapToInt(TicketTier::getTotalCapacity).sum();
+        }
+        return 0;
+    }
+
+    public BigDecimal getStartingPrice() {
+        if (tiers != null && !tiers.isEmpty()) {
+            return tiers.stream()
+                    .map(TicketTier::getPrice)
+                    .min(BigDecimal::compareTo)
+                    .orElse(BigDecimal.ZERO);
+        }
+        return BigDecimal.ZERO;
+    }
+
+    // ==================== Backward-Compatible Transient Getters ====================
+    // These computed helpers prevent SpEL template errors across Thymeleaf views
+    // without creating any legacy columns in the database.
+
+    @Transient
+    public BigDecimal getNormalPrice() {
+        return getTierPrice("Normal Pass");
+    }
+
+    @Transient
+    public int getNormalCapacity() {
+        return getTierCapacity("Normal Pass");
+    }
+
+    @Transient
+    public int getNormalAvailable() {
+        return getTierAvailable("Normal Pass");
+    }
+
+    @Transient
+    public BigDecimal getVipPrice() {
+        return getTierPrice("VIP Pass");
+    }
+
+    @Transient
+    public int getVipCapacity() {
+        return getTierCapacity("VIP Pass");
+    }
+
+    @Transient
+    public int getVipAvailable() {
+        return getTierAvailable("VIP Pass");
+    }
+
+    @Transient
+    public BigDecimal getVvipPrice() {
+        return getTierPrice("VVIP Pass");
+    }
+
+    @Transient
+    public int getVvipCapacity() {
+        return getTierCapacity("VVIP Pass");
+    }
+
+    @Transient
+    public int getVvipAvailable() {
+        return getTierAvailable("VVIP Pass");
+    }
+
+    private BigDecimal getTierPrice(String tierName) {
+        if (tiers != null) {
+            for (TicketTier t : tiers) {
+                if (t.getName() != null && t.getName().equalsIgnoreCase(tierName)) {
+                    return t.getPrice();
+                }
+            }
+        }
+        return BigDecimal.ZERO;
+    }
+
+    private int getTierCapacity(String tierName) {
+        if (tiers != null) {
+            for (TicketTier t : tiers) {
+                if (t.getName() != null && t.getName().equalsIgnoreCase(tierName)) {
+                    return t.getTotalCapacity();
+                }
+            }
+        }
+        return 0;
+    }
+
+    private int getTierAvailable(String tierName) {
+        if (tiers != null) {
+            for (TicketTier t : tiers) {
+                if (t.getName() != null && t.getName().equalsIgnoreCase(tierName)) {
+                    return t.getAvailableCapacity();
+                }
+            }
+        }
+        return 0;
     }
 
     // Getters and Setters
@@ -155,78 +241,6 @@ public class Event {
         this.bookingEndDate = bookingEndDate;
     }
 
-    public BigDecimal getNormalPrice() {
-        return normalPrice;
-    }
-
-    public void setNormalPrice(BigDecimal normalPrice) {
-        this.normalPrice = normalPrice;
-    }
-
-    public int getNormalCapacity() {
-        return normalCapacity;
-    }
-
-    public void setNormalCapacity(int normalCapacity) {
-        this.normalCapacity = normalCapacity;
-    }
-
-    public int getNormalAvailable() {
-        return normalAvailable;
-    }
-
-    public void setNormalAvailable(int normalAvailable) {
-        this.normalAvailable = normalAvailable;
-    }
-
-    public BigDecimal getVipPrice() {
-        return vipPrice;
-    }
-
-    public void setVipPrice(BigDecimal vipPrice) {
-        this.vipPrice = vipPrice;
-    }
-
-    public int getVipCapacity() {
-        return vipCapacity;
-    }
-
-    public void setVipCapacity(int vipCapacity) {
-        this.vipCapacity = vipCapacity;
-    }
-
-    public int getVipAvailable() {
-        return vipAvailable;
-    }
-
-    public void setVipAvailable(int vipAvailable) {
-        this.vipAvailable = vipAvailable;
-    }
-
-    public BigDecimal getVvipPrice() {
-        return vvipPrice;
-    }
-
-    public void setVvipPrice(BigDecimal vvipPrice) {
-        this.vvipPrice = vvipPrice;
-    }
-
-    public int getVvipCapacity() {
-        return vvipCapacity;
-    }
-
-    public void setVvipCapacity(int vvipCapacity) {
-        this.vvipCapacity = vvipCapacity;
-    }
-
-    public int getVvipAvailable() {
-        return vvipAvailable;
-    }
-
-    public void setVvipAvailable(int vvipAvailable) {
-        this.vvipAvailable = vvipAvailable;
-    }
-
     public EventStatus getStatus() {
         return status;
     }
@@ -243,18 +257,7 @@ public class Event {
         this.organizer = organizer;
     }
 
-    public LocalDateTime getCreatedAt() {
-        return createdAt;
-    }
-
-    public void setCreatedAt(LocalDateTime createdAt) {
-        this.createdAt = createdAt;
-    }
-
     public Set<User> getStaffMembers() {
-        if (staffMembers == null) {
-            staffMembers = new HashSet<>();
-        }
         return staffMembers;
     }
 
@@ -263,13 +266,34 @@ public class Event {
     }
 
     public void addStaffMember(User user) {
-        getStaffMembers().add(user);
+        this.staffMembers.add(user);
     }
 
     public void removeStaffMember(User user) {
-        if (this.staffMembers != null) {
-            this.staffMembers.remove(user);
+        this.staffMembers.remove(user);
+    }
+
+    public List<TicketTier> getTiers() {
+        return tiers;
+    }
+
+    public void setTiers(List<TicketTier> tiers) {
+        this.tiers = tiers;
+    }
+
+    public void addTier(TicketTier tier) {
+        if (this.tiers == null) {
+            this.tiers = new ArrayList<>();
         }
+        this.tiers.add(tier);
+        tier.setEvent(this);
+    }
+
+    public LocalDateTime getCreatedAt() {
+        return createdAt;
+    }
+
+    public void setCreatedAt(LocalDateTime createdAt) {
+        this.createdAt = createdAt;
     }
 }
-

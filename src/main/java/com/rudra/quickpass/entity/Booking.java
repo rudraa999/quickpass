@@ -3,6 +3,8 @@ package com.rudra.quickpass.entity;
 import jakarta.persistence.*;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
 @Entity
 @Table(name = "bookings")
@@ -12,8 +14,8 @@ public class Booking {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false, unique = true)
-    private String ticketCode;
+    @Column(name = "order_number", length = 50, unique = true)
+    private String orderNumber;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "attendee_id", nullable = false)
@@ -23,35 +25,66 @@ public class Booking {
     @JoinColumn(name = "event_id", nullable = false)
     private Event event;
 
-    @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
-    private PassType passType;
+    @Column(name = "total_quantity", nullable = false)
+    private int totalQuantity = 1;
 
-    @Column(nullable = false)
-    private int quantity = 1;
-
-    @Column(nullable = false)
-    private BigDecimal unitPrice = BigDecimal.ZERO;
-
-    @Column(nullable = false)
+    @Column(name = "total_amount", nullable = false)
     private BigDecimal totalAmount = BigDecimal.ZERO;
 
-    @Lob
-    @Column(columnDefinition = "LONGTEXT")
-    private String qrCodeBase64;
+    @Column(length = 30, nullable = false)
+    private String status = "CONFIRMED";
 
-    private boolean isUsed = false;
-
-    private LocalDateTime scannedAt;
-
+    @Column(name = "booked_at")
     private LocalDateTime bookedAt;
+
+    @OneToMany(mappedBy = "booking", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OrderBy("id ASC")
+    private List<Ticket> tickets = new ArrayList<>();
 
     public Booking() {
     }
 
     @PrePersist
     protected void onCreate() {
-        this.bookedAt = LocalDateTime.now();
+        if (this.bookedAt == null) {
+            this.bookedAt = LocalDateTime.now();
+        }
+        if (this.status == null) {
+            this.status = "CONFIRMED";
+        }
+    }
+
+    // Helper Transient methods for backward compatibility
+    @Transient
+    public String getTicketCode() {
+        return (tickets != null && !tickets.isEmpty()) ? tickets.get(0).getTicketCode() : null;
+    }
+
+    @Transient
+    public String getQrCodeBase64() {
+        return (tickets != null && !tickets.isEmpty()) ? tickets.get(0).getQrCodeBase64() : null;
+    }
+
+    @Transient
+    public boolean isUsed() {
+        return tickets != null && !tickets.isEmpty() && tickets.stream().allMatch(Ticket::isUsed);
+    }
+
+    @Transient
+    public LocalDateTime getScannedAt() {
+        return (tickets != null && !tickets.isEmpty()) ? tickets.get(0).getScannedAt() : null;
+    }
+
+    @Transient
+    public int getQuantity() {
+        return totalQuantity;
+    }
+
+    @Transient
+    public String getPassType() {
+        return (tickets != null && !tickets.isEmpty() && tickets.get(0).getTicketTier() != null)
+                ? tickets.get(0).getTicketTier().getName()
+                : "Pass";
     }
 
     // Getters and Setters
@@ -63,12 +96,12 @@ public class Booking {
         this.id = id;
     }
 
-    public String getTicketCode() {
-        return ticketCode;
+    public String getOrderNumber() {
+        return orderNumber;
     }
 
-    public void setTicketCode(String ticketCode) {
-        this.ticketCode = ticketCode;
+    public void setOrderNumber(String orderNumber) {
+        this.orderNumber = orderNumber;
     }
 
     public User getAttendee() {
@@ -87,28 +120,12 @@ public class Booking {
         this.event = event;
     }
 
-    public PassType getPassType() {
-        return passType;
+    public int getTotalQuantity() {
+        return totalQuantity;
     }
 
-    public void setPassType(PassType passType) {
-        this.passType = passType;
-    }
-
-    public int getQuantity() {
-        return quantity;
-    }
-
-    public void setQuantity(int quantity) {
-        this.quantity = quantity;
-    }
-
-    public BigDecimal getUnitPrice() {
-        return unitPrice;
-    }
-
-    public void setUnitPrice(BigDecimal unitPrice) {
-        this.unitPrice = unitPrice;
+    public void setTotalQuantity(int totalQuantity) {
+        this.totalQuantity = totalQuantity;
     }
 
     public BigDecimal getTotalAmount() {
@@ -119,28 +136,12 @@ public class Booking {
         this.totalAmount = totalAmount;
     }
 
-    public String getQrCodeBase64() {
-        return qrCodeBase64;
+    public String getStatus() {
+        return status;
     }
 
-    public void setQrCodeBase64(String qrCodeBase64) {
-        this.qrCodeBase64 = qrCodeBase64;
-    }
-
-    public boolean isUsed() {
-        return isUsed;
-    }
-
-    public void setUsed(boolean used) {
-        isUsed = used;
-    }
-
-    public LocalDateTime getScannedAt() {
-        return scannedAt;
-    }
-
-    public void setScannedAt(LocalDateTime scannedAt) {
-        this.scannedAt = scannedAt;
+    public void setStatus(String status) {
+        this.status = status;
     }
 
     public LocalDateTime getBookedAt() {
@@ -150,5 +151,20 @@ public class Booking {
     public void setBookedAt(LocalDateTime bookedAt) {
         this.bookedAt = bookedAt;
     }
-}
 
+    public List<Ticket> getTickets() {
+        return tickets;
+    }
+
+    public void setTickets(List<Ticket> tickets) {
+        this.tickets = tickets;
+    }
+
+    public void addTicket(Ticket ticket) {
+        if (this.tickets == null) {
+            this.tickets = new ArrayList<>();
+        }
+        this.tickets.add(ticket);
+        ticket.setBooking(this);
+    }
+}

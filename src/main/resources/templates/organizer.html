@@ -185,10 +185,9 @@
                         </span>
                     </div>
 
-                    <!-- Title (Clickable when Approved) -->
+                    <!-- Title (Always clickable to event dashboard) -->
                     <h3 class="text-xl font-extrabold text-slate-900 tracking-tight">
-                        <a th:if="${event.status.name() == 'APPROVED'}"
-                            th:href="@{/organizer/events/{id}(id=${event.id})}"
+                        <a th:href="@{/organizer/events/{id}(id=${event.id})}"
                             class="hover:text-indigo-600 transition inline-flex items-center space-x-2 group">
                             <span th:text="${event.title}">Event Name</span>
                             <span
@@ -197,7 +196,6 @@
                                 <span>Dashboard & Analytics &rarr;</span>
                             </span>
                         </a>
-                        <span th:if="${event.status.name() != 'APPROVED'}" th:text="${event.title}">Event Name</span>
                     </h3>
 
                     <p class="text-slate-600 text-sm line-clamp-2 leading-relaxed" th:text="${event.description}">
@@ -268,8 +266,7 @@
                             th:text="${event.totalCapacity} + ' Passes'">155 Passes</span>
                     </div>
 
-                    <div th:if="${event.status.name() == 'APPROVED'}"
-                        class="pt-2 flex flex-col items-start lg:items-end gap-1.5">
+                    <div class="pt-2 flex flex-col items-start lg:items-end gap-1.5">
                         <a th:href="@{/organizer/events/{id}(id=${event.id})}"
                             class="inline-flex items-center space-x-1.5 px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs shadow-md shadow-indigo-100 transition active:scale-[0.98]">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -279,13 +276,6 @@
                             <span>Monitor Sales & Entry &rarr;</span>
                         </a>
                         <span class="text-[10px] text-slate-400 font-medium">Sales, Inventory & Gate Scanner</span>
-                    </div>
-                    <div th:if="${event.status.name() == 'PENDING_APPROVAL'}" class="pt-2">
-                        <span
-                            class="inline-flex items-center space-x-1 px-3 py-1.5 rounded-xl bg-amber-50 text-amber-700 border border-amber-200 text-xs font-semibold">
-                            <span>⏳</span>
-                            <span>Awaiting Admin Approval</span>
-                        </span>
                     </div>
                 </div>
             </div>

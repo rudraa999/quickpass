@@ -4,6 +4,8 @@ import com.rudra.quickpass.entity.PassType;
 import java.math.BigDecimal;
 
 public class PassTierAnalyticsDto {
+    private Long tierId;
+    private String name;
     private PassType passType;
     private BigDecimal price;
     private int capacity;
@@ -18,9 +20,10 @@ public class PassTierAnalyticsDto {
     public PassTierAnalyticsDto() {
     }
 
-    public PassTierAnalyticsDto(PassType passType, BigDecimal price, int capacity, int sold, int available,
+    public PassTierAnalyticsDto(Long tierId, String name, BigDecimal price, int capacity, int sold, int available,
                                 BigDecimal revenue, int scanned) {
-        this.passType = passType;
+        this.tierId = tierId;
+        this.name = name;
         this.price = price != null ? price : BigDecimal.ZERO;
         this.capacity = capacity;
         this.sold = sold;
@@ -37,6 +40,39 @@ public class PassTierAnalyticsDto {
         } else {
             this.inventoryStatus = "IN_STOCK";
         }
+
+        // Try mapping to PassType if standard name
+        if (name != null) {
+            if (name.equalsIgnoreCase("Normal Pass") || name.equalsIgnoreCase("NORMAL")) {
+                this.passType = PassType.NORMAL;
+            } else if (name.equalsIgnoreCase("VIP Pass") || name.equalsIgnoreCase("VIP")) {
+                this.passType = PassType.VIP;
+            } else if (name.equalsIgnoreCase("VVIP Pass") || name.equalsIgnoreCase("VVIP")) {
+                this.passType = PassType.VVIP;
+            }
+        }
+    }
+
+    public PassTierAnalyticsDto(PassType passType, BigDecimal price, int capacity, int sold, int available,
+                                BigDecimal revenue, int scanned) {
+        this(null, passType != null ? passType.name() : "General", price, capacity, sold, available, revenue, scanned);
+        this.passType = passType;
+    }
+
+    public Long getTierId() {
+        return tierId;
+    }
+
+    public void setTierId(Long tierId) {
+        this.tierId = tierId;
+    }
+
+    public String getName() {
+        return name != null ? name : (passType != null ? passType.name() : "Tier");
+    }
+
+    public void setName(String name) {
+        this.name = name;
     }
 
     public PassType getPassType() {
@@ -119,4 +155,3 @@ public class PassTierAnalyticsDto {
         this.inventoryStatus = inventoryStatus;
     }
 }
-

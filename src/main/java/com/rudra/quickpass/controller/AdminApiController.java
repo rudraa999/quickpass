@@ -129,12 +129,12 @@ public class AdminApiController {
 
     @PostMapping("/bookings/{id}/toggle-scan")
     public ResponseEntity<Map<String, Object>> toggleBookingScan(@PathVariable Long id) {
-        Booking booking = adminService.toggleBookingCheckIn(id);
+        com.rudra.quickpass.entity.Ticket ticket = adminService.toggleBookingCheckIn(id);
         Map<String, Object> res = new HashMap<>();
-        res.put("bookingId", booking.getId());
-        res.put("isUsed", booking.isUsed());
-        res.put("ticketCode", booking.getTicketCode());
-        res.put("message", booking.isUsed() ? "Pass checked in successfully" : "Pass check-in revoked");
+        res.put("ticketId", ticket.getId());
+        res.put("isUsed", ticket.isUsed());
+        res.put("ticketCode", ticket.getTicketCode());
+        res.put("message", ticket.isUsed() ? "Pass checked in successfully" : "Pass check-in revoked");
         return ResponseEntity.ok(res);
     }
 }

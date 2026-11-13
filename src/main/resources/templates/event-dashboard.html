@@ -14,10 +14,19 @@
             font-family: 'Plus Jakarta Sans', sans-serif;
         }
 
+        .tab-btn {
+            cursor: pointer;
+            user-select: none;
+        }
+
         .tab-btn.active {
-            background-color: #4f46e5;
-            color: #ffffff;
-            box-shadow: 0 4px 12px rgba(79, 70, 229, 0.25);
+            background-color: #4f46e5 !important;
+            color: #ffffff !important;
+            box-shadow: 0 4px 12px rgba(79, 70, 229, 0.25) !important;
+        }
+
+        .tab-btn.active svg {
+            color: #ffffff !important;
         }
     </style>
 </head>
@@ -283,7 +292,7 @@
 
         <!-- Navigation Tabs Bar -->
         <div class="bg-white rounded-2xl p-2 border border-slate-200/90 shadow-sm flex flex-wrap gap-2">
-            <button type="button" onclick="switchTab('salesTab', this)"
+            <button type="button" id="btn-salesTab" onclick="switchTab('salesTab', this)"
                 class="tab-btn active px-4 py-2.5 rounded-xl text-xs font-bold transition flex items-center space-x-2">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -292,7 +301,7 @@
                 <span>Sales Dashboard</span>
             </button>
 
-            <button type="button" onclick="switchTab('inventoryTab', this)"
+            <button type="button" id="btn-inventoryTab" onclick="switchTab('inventoryTab', this)"
                 class="tab-btn px-4 py-2.5 rounded-xl text-xs font-bold text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition flex items-center space-x-2">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -301,7 +310,7 @@
                 <span>Ticket Inventory</span>
             </button>
 
-            <button type="button" onclick="switchTab('entryTab', this)"
+            <button type="button" id="btn-entryTab" onclick="switchTab('entryTab', this)"
                 class="tab-btn px-4 py-2.5 rounded-xl text-xs font-bold text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition flex items-center space-x-2">
                 <svg class="w-4 h-4 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -310,7 +319,7 @@
                 <span>Event-Day Entry & Scanner</span>
             </button>
 
-            <button type="button" onclick="switchTab('manifestTab', this)"
+            <button type="button" id="btn-manifestTab" onclick="switchTab('manifestTab', this)"
                 class="tab-btn px-4 py-2.5 rounded-xl text-xs font-bold text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition flex items-center space-x-2">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -321,7 +330,7 @@
                     th:text="${analytics.bookings.size()}">0</span>
             </button>
 
-            <button type="button" onclick="switchTab('staffCrewTab', this)"
+            <button type="button" id="btn-staffCrewTab" onclick="switchTab('staffCrewTab', this)"
                 class="tab-btn px-4 py-2.5 rounded-xl text-xs font-bold text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition flex items-center space-x-2">
                 <svg class="w-4 h-4 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -377,8 +386,40 @@
                             </tr>
                         </thead>
                         <tbody class="divide-y divide-slate-100 font-medium">
+                            <!-- Dynamic Tiers Loop -->
+                            <tr th:if="${analytics.tiers != null && !analytics.tiers.isEmpty()}" th:each="tier : ${analytics.tiers}" class="hover:bg-slate-50/70 transition">
+                                <td class="p-4">
+                                    <span class="px-2.5 py-1 rounded-md text-xs font-bold bg-indigo-50 text-indigo-700 border border-indigo-200"
+                                        th:text="${tier.name}">
+                                        Tier Name
+                                    </span>
+                                </td>
+                                <td class="p-4 font-bold text-slate-900">$<span th:text="${tier.price}">0</span></td>
+                                <td class="p-4" th:text="${tier.capacity}">0</td>
+                                <td class="p-4 font-extrabold text-slate-900" th:text="${tier.sold}">0</td>
+                                <td class="p-4">
+                                    <div class="flex items-center space-x-2">
+                                        <span class="w-10 text-right font-bold text-slate-700"
+                                            th:text="${#numbers.formatDecimal(tier.soldPercentage, 1, 1)} + '%'">0%</span>
+                                        <div class="w-24 bg-slate-200 h-2 rounded-full overflow-hidden">
+                                            <div class="bg-indigo-600 h-2 rounded-full"
+                                                th:style="'width: ' + ${tier.soldPercentage} + '%;'"></div>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td class="p-4 font-bold text-emerald-600">$<span
+                                        th:text="${#numbers.formatDecimal(tier.revenue, 1, 2)}">0.00</span>
+                                </td>
+                                <td class="p-4">
+                                    <span class="px-2 py-0.5 rounded text-[11px] font-bold"
+                                        th:classappend="${tier.available <= 0} ? 'bg-rose-100 text-rose-800' : 'bg-emerald-100 text-emerald-800'"
+                                        th:text="${tier.available <= 0 ? 'SOLD OUT' : 'AVAILABLE'}">AVAILABLE</span>
+                                </td>
+                            </tr>
+
+                            <!-- Fallback for legacy static tiers -->
                             <!-- Normal Tier Row -->
-                            <tr class="hover:bg-slate-50/70 transition">
+                            <tr th:unless="${analytics.tiers != null && !analytics.tiers.isEmpty()}" class="hover:bg-slate-50/70 transition">
                                 <td class="p-4">
                                     <span
                                         class="px-2.5 py-1 rounded-md text-xs font-bold bg-slate-100 text-slate-800 border border-slate-200">
@@ -813,8 +854,8 @@
 
                             <!-- Booking Rows -->
                             <tr th:each="b : ${analytics.bookings}" class="hover:bg-slate-50/70 transition attendee-row"
-                                th:attr="data-search=${#strings.toLowerCase(b.attendeeName + ' ' + b.attendeeEmail + ' ' + b.ticketCode)}"
-                                th:id="'bookingRow-' + ${b.bookingId}">
+                                th:attr="data-search=${#strings.toLowerCase((b.attendeeName != null ? b.attendeeName : '') + ' ' + (b.attendeeEmail != null ? b.attendeeEmail : '') + ' ' + (b.ticketCode != null ? b.ticketCode : ''))}"
+                                th:id="'ticketRow-' + ${b.ticketId != null ? b.ticketId : b.bookingId}">
 
                                 <td class="p-4">
                                     <div class="font-bold text-slate-900" th:text="${b.attendeeName}">Attendee Name
@@ -828,9 +869,8 @@
                                 </td>
 
                                 <td class="p-4">
-                                    <span class="px-2.5 py-1 rounded-md text-[10px] font-extrabold uppercase"
-                                        th:classappend="${b.passType.name() == 'VVIP' ? 'bg-purple-100 text-purple-800 border border-purple-200' : (b.passType.name() == 'VIP' ? 'bg-indigo-100 text-indigo-800 border border-indigo-200' : 'bg-slate-100 text-slate-800 border border-slate-200')}"
-                                        th:text="${b.passType}">
+                                    <span class="px-2.5 py-1 rounded-md text-[10px] font-extrabold uppercase bg-indigo-50 text-indigo-700 border border-indigo-200"
+                                        th:text="${b.tierName != null ? b.tierName : (b.passType != null ? b.passType : 'Pass')}">
                                         VIP
                                     </span>
                                 </td>
@@ -846,7 +886,7 @@
                                     Date
                                 </td>
 
-                                <td class="p-4" th:id="'statusCell-' + ${b.bookingId}">
+                                <td class="p-4" th:id="'statusCell-' + ${b.ticketId != null ? b.ticketId : b.bookingId}">
                                     <span th:if="${b.used}"
                                         class="px-2.5 py-1 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 flex items-center space-x-1 w-fit">
                                         <span>✓</span>
@@ -859,9 +899,9 @@
                                     </span>
                                 </td>
 
-                                <td class="p-4 text-right" th:id="'actionCell-' + ${b.bookingId}">
+                                <td class="p-4 text-right" th:id="'actionCell-' + ${b.ticketId != null ? b.ticketId : b.bookingId}">
                                     <button type="button"
-                                        th:attr="onclick='toggleRowCheckIn(' + ${analytics.eventId} + ', ' + ${b.bookingId} + ')'"
+                                        th:attr="onclick='toggleRowCheckIn(' + ${analytics.eventId} + ', ' + ${b.ticketId != null ? b.ticketId : b.bookingId} + ')'"
                                         th:classappend="${b.used ? 'bg-slate-100 hover:bg-slate-200 text-slate-700' : 'bg-indigo-50 hover:bg-indigo-100 text-indigo-700'}"
                                         class="px-3 py-1.5 rounded-lg text-xs font-bold transition">
                                         <span th:text="${b.used ? 'Undo Check-in' : 'Check In'}">Check In</span>
@@ -1000,6 +1040,9 @@
     <script>
         // Tab Switching - available immediately
         function switchTab(tabId, btnElement) {
+            if (!btnElement) {
+                btnElement = document.getElementById('btn-' + tabId);
+            }
             document.querySelectorAll('section[id$="Tab"]').forEach(sec => sec.classList.add('hidden'));
             document.querySelectorAll('.tab-btn').forEach(btn => {
                 btn.classList.remove('active');
@@ -1014,7 +1057,23 @@
                 btnElement.classList.add('active');
                 btnElement.classList.remove('text-slate-600');
             }
+
+            // Sync hash without scrolling
+            try {
+                const shortTab = tabId.replace('Tab', '');
+                history.replaceState(null, '', '#' + shortTab);
+            } catch (e) {}
         }
+
+        // Listen for direct deep links like #manifest, #inventory, #entry, #staff
+        window.addEventListener('DOMContentLoaded', () => {
+            const hash = window.location.hash.replace('#', '').toLowerCase();
+            if (hash === 'inventory') switchTab('inventoryTab');
+            else if (hash === 'entry' || hash === 'scanner') switchTab('entryTab');
+            else if (hash === 'manifest' || hash === 'attendees') switchTab('manifestTab');
+            else if (hash === 'staff' || hash === 'crew') switchTab('staffCrewTab');
+            else if (hash === 'sales') switchTab('salesTab');
+        });
 
         const dashboardRoot = document.getElementById('eventDashboardRoot');
         const currentEventId = dashboardRoot ? dashboardRoot.getAttribute('data-event-id') : '0';
@@ -1118,42 +1177,50 @@
         }
 
         // Toggle Row Check In in Manifest Table
-        async function toggleRowCheckIn(eventId, bookingId) {
+        async function toggleRowCheckIn(eventId, ticketOrBookingId) {
             try {
-                const res = await fetch(`/api/events/${eventId}/bookings/${bookingId}/toggle-scan`, { method: 'POST' });
+                const res = await fetch(`/api/events/${eventId}/bookings/${ticketOrBookingId}/toggle-scan`, { method: 'POST' });
                 if (!res.ok) throw new Error('Toggle failed');
                 const data = await res.json();
 
                 // Update table cell
-                const statusCell = document.getElementById(`statusCell-${bookingId}`);
-                const actionCell = document.getElementById(`actionCell-${bookingId}`);
+                const statusCell = document.getElementById(`statusCell-${ticketOrBookingId}`);
+                const actionCell = document.getElementById(`actionCell-${ticketOrBookingId}`);
 
                 if (data.isUsed) {
-                    statusCell.innerHTML = `
-                        <span class="px-2.5 py-1 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 flex items-center space-x-1 w-fit">
-                            <span>✓</span>
-                            <span>Checked In</span>
-                        </span>
-                    `;
-                    actionCell.innerHTML = `
-                        <button type="button" onclick="toggleRowCheckIn(${eventId}, ${bookingId})"
-                                class="px-3 py-1.5 rounded-lg text-xs font-bold transition bg-slate-100 hover:bg-slate-200 text-slate-700">
-                            Undo Check-in
-                        </button>
-                    `;
+                    if (statusCell) {
+                        statusCell.innerHTML = `
+                            <span class="px-2.5 py-1 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 flex items-center space-x-1 w-fit">
+                                <span>✓</span>
+                                <span>Checked In</span>
+                            </span>
+                        `;
+                    }
+                    if (actionCell) {
+                        actionCell.innerHTML = `
+                            <button type="button" onclick="toggleRowCheckIn(${eventId}, ${ticketOrBookingId})"
+                                    class="px-3 py-1.5 rounded-lg text-xs font-bold transition bg-slate-100 hover:bg-slate-200 text-slate-700">
+                                Undo Check-in
+                            </button>
+                        `;
+                    }
                 } else {
-                    statusCell.innerHTML = `
-                        <span class="px-2.5 py-1 rounded-full text-[10px] font-bold bg-slate-100 text-slate-600 flex items-center space-x-1 w-fit">
-                            <span>⏳</span>
-                            <span>Awaiting Entry</span>
-                        </span>
-                    `;
-                    actionCell.innerHTML = `
-                        <button type="button" onclick="toggleRowCheckIn(${eventId}, ${bookingId})"
-                                class="px-3 py-1.5 rounded-lg text-xs font-bold transition bg-indigo-50 hover:bg-indigo-100 text-indigo-700">
-                            Check In
-                        </button>
-                    `;
+                    if (statusCell) {
+                        statusCell.innerHTML = `
+                            <span class="px-2.5 py-1 rounded-full text-[10px] font-bold bg-slate-100 text-slate-600 flex items-center space-x-1 w-fit">
+                                <span>⏳</span>
+                                <span>Awaiting Entry</span>
+                            </span>
+                        `;
+                    }
+                    if (actionCell) {
+                        actionCell.innerHTML = `
+                            <button type="button" onclick="toggleRowCheckIn(${eventId}, ${ticketOrBookingId})"
+                                    class="px-3 py-1.5 rounded-lg text-xs font-bold transition bg-indigo-50 hover:bg-indigo-100 text-indigo-700">
+                                Check In
+                            </button>
+                        `;
+                    }
                 }
             } catch (err) {
                 alert('Could not update status: ' + err.message);

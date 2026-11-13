@@ -1,12 +1,8 @@
 package com.rudra.quickpass.service;
 
 import com.rudra.quickpass.dto.*;
-import com.rudra.quickpass.entity.Booking;
-import com.rudra.quickpass.entity.Event;
-import com.rudra.quickpass.entity.PassType;
-import com.rudra.quickpass.entity.User;
-import com.rudra.quickpass.repository.BookingRepository;
-import com.rudra.quickpass.repository.EventRepository;
+import com.rudra.quickpass.entity.*;
+import com.rudra.quickpass.repository.*;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -22,10 +18,20 @@ public class EventAnalyticsService {
 
     private final EventRepository eventRepository;
     private final BookingRepository bookingRepository;
+    private final TicketRepository ticketRepository;
+    private final TicketTierRepository ticketTierRepository;
+    private final UserRepository userRepository;
 
-    public EventAnalyticsService(EventRepository eventRepository, BookingRepository bookingRepository) {
+    public EventAnalyticsService(EventRepository eventRepository,
+                                 BookingRepository bookingRepository,
+                                 TicketRepository ticketRepository,
+                                 TicketTierRepository ticketTierRepository,
+                                 UserRepository userRepository) {
         this.eventRepository = eventRepository;
         this.bookingRepository = bookingRepository;
+        this.ticketRepository = ticketRepository;
+        this.ticketTierRepository = ticketTierRepository;
+        this.userRepository = userRepository;
     }
 
     public EventAnalyticsDto getEventAnalytics(Long eventId, Long currentUserId, boolean isAdmin) {
@@ -35,7 +41,10 @@ public class EventAnalyticsService {
         validateOwnership(event, currentUserId, isAdmin);
 
         List<Booking> bookings = bookingRepository.findByEventIdOrderByBookedAtDesc(eventId);
-        return buildEventAnalytics(event, bookings);
+        List<Ticket> tickets = ticketRepository.findByEventIdWithDetails(eventId);
+        List<TicketTier> tiers = ticketTierRepository.findByEventIdOrderByIdAsc(eventId);
+
+        return buildEventAnalytics(event, bookings, tickets, tiers);
     }
 
     @Transactional
@@ -50,85 +59,123 @@ public class EventAnalyticsService {
             return ScanTicketResponse.invalid("Invalid ticket code format.");
         }
 
-        Booking booking = bookingRepository.findByEventIdAndTicketCode(eventId, cleanCode)
-                .orElse(null);
+        User scannerStaff = userRepository.findById(currentUserId).orElse(null);
+        String scannerName = scannerStaff != null ? scannerStaff.getFullName() : "Gate Crew";
 
-        if (booking == null) {
-            boolean existsElsewhere = bookingRepository.existsByTicketCode(cleanCode);
+        // Try finding individual Ticket
+        Ticket ticket = ticketRepository.findByTicketCode(cleanCode).orElse(null);
+
+        long totalSold = ticketRepository.countByEventId(eventId);
+        long totalScanned = ticketRepository.countByEventIdAndIsUsedTrue(eventId);
+
+        if (ticket == null) {
+            boolean existsElsewhere = ticketRepository.existsByTicketCode(cleanCode);
             if (existsElsewhere) {
-                return ScanTicketResponse.invalid("Ticket code '" + cleanCode + "' belongs to a DIFFERENT event, not this one!");
+                return ScanTicketResponse.invalid("Ticket code '" + cleanCode + "' belongs to a DIFFERENT event, not this event!");
             }
             return ScanTicketResponse.invalid("Ticket code '" + cleanCode + "' not found in the QuickPass system.");
         }
 
-        List<Booking> allEventBookings = bookingRepository.findByEventIdOrderByBookedAtDesc(eventId);
-        int totalSold = allEventBookings.stream().mapToInt(Booking::getQuantity).sum();
-        int totalScanned = allEventBookings.stream().filter(Booking::isUsed).mapToInt(Booking::getQuantity).sum();
+        if (!ticket.getEvent().getId().equals(eventId)) {
+            return ScanTicketResponse.invalid("Ticket code '" + cleanCode + "' belongs to a DIFFERENT event (" + ticket.getEvent().getTitle() + "), not this event!");
+        }
 
-        String attendeeName = booking.getAttendee() != null ? booking.getAttendee().getFullName() : "Guest";
-        String attendeeEmail = booking.getAttendee() != null ? booking.getAttendee().getEmail() : "N/A";
+        String attendeeName = ticket.getAttendeeName();
+        String attendeeEmail = ticket.getBooking() != null && ticket.getBooking().getAttendee() != null
+                ? ticket.getBooking().getAttendee().getEmail() : "N/A";
+        String tierName = ticket.getTicketTier() != null ? ticket.getTicketTier().getName() : "Standard";
 
-        if (booking.isUsed()) {
+        if (ticket.isUsed()) {
+            String previousStaff = ticket.getScannedBy() != null ? " by " + ticket.getScannedBy().getFullName() : "";
             return ScanTicketResponse.alreadyScanned(
                     "Warning: This ticket was ALREADY checked in on " +
-                            (booking.getScannedAt() != null ? booking.getScannedAt().toString() : "an earlier scan") +
-                            ". Possible duplicate entry attempt!",
-                    booking.getTicketCode(),
+                            (ticket.getScannedAt() != null ? ticket.getScannedAt().toString() : "an earlier scan") +
+                            previousStaff + ". Possible duplicate entry attempt!",
+                    ticket.getTicketCode(),
                     attendeeName,
                     attendeeEmail,
-                    booking.getPassType().name(),
-                    booking.getQuantity(),
+                    tierName,
+                    1,
                     event.getTitle(),
-                    booking.getScannedAt(),
-                    totalScanned,
-                    totalSold
+                    ticket.getScannedAt(),
+                    ticket.getScannedBy() != null ? ticket.getScannedBy().getFullName() : "Staff",
+                    (int) totalScanned,
+                    (int) totalSold
             );
         }
 
-        // Mark as checked in
-        booking.setUsed(true);
-        booking.setScannedAt(LocalDateTime.now());
-        bookingRepository.save(booking);
+        // Mark ticket as used
+        ticket.setUsed(true);
+        ticket.setScannedAt(LocalDateTime.now());
+        ticket.setScannedBy(scannerStaff);
+        ticketRepository.save(ticket);
 
-        totalScanned += booking.getQuantity();
+        totalScanned++;
 
         return ScanTicketResponse.success(
-                "Check-in verified successfully! Welcome " + attendeeName + " (" + booking.getQuantity() + "x " + booking.getPassType() + ")",
-                booking.getTicketCode(),
+                "Check-in verified successfully! Welcome " + attendeeName + " (" + tierName + ")",
+                ticket.getTicketCode(),
                 attendeeName,
                 attendeeEmail,
-                booking.getPassType().name(),
-                booking.getQuantity(),
+                tierName,
+                1,
                 event.getTitle(),
-                booking.getScannedAt(),
-                totalScanned,
-                totalSold
+                ticket.getScannedAt(),
+                scannerName,
+                (int) totalScanned,
+                (int) totalSold
         );
     }
 
     @Transactional
-    public boolean toggleBookingCheckIn(Long eventId, Long bookingId, Long currentUserId, boolean isAdmin) {
+    public boolean toggleBookingCheckIn(Long eventId, Long bookingOrTicketId, Long currentUserId, boolean isAdmin) {
         Event event = eventRepository.findById(eventId)
                 .orElseThrow(() -> new IllegalArgumentException("Event not found with ID: " + eventId));
 
         validateScannerAccess(event, currentUserId, isAdmin);
 
-        Booking booking = bookingRepository.findById(bookingId)
-                .orElseThrow(() -> new IllegalArgumentException("Booking not found with ID: " + bookingId));
+        // Try ticket first
+        Ticket ticket = ticketRepository.findById(bookingOrTicketId).orElse(null);
+        if (ticket != null && ticket.getEvent().getId().equals(eventId)) {
+            boolean newStatus = !ticket.isUsed();
+            ticket.setUsed(newStatus);
+            ticket.setScannedAt(newStatus ? LocalDateTime.now() : null);
+            if (newStatus) {
+                userRepository.findById(currentUserId).ifPresent(ticket::setScannedBy);
+            } else {
+                ticket.setScannedBy(null);
+            }
+            ticketRepository.save(ticket);
+            return newStatus;
+        }
+
+        // If bookingId was passed, toggle the first ticket of the booking
+        Booking booking = bookingRepository.findById(bookingOrTicketId)
+                .orElseThrow(() -> new IllegalArgumentException("Booking or Ticket not found with ID: " + bookingOrTicketId));
 
         if (!booking.getEvent().getId().equals(eventId)) {
             throw new IllegalArgumentException("Booking does not belong to this event");
         }
 
-        boolean newStatus = !booking.isUsed();
-        booking.setUsed(newStatus);
-        booking.setScannedAt(newStatus ? LocalDateTime.now() : null);
-        bookingRepository.save(booking);
+        List<Ticket> bTickets = ticketRepository.findByBookingIdOrderByIdAsc(booking.getId());
+        if (!bTickets.isEmpty()) {
+            Ticket firstTicket = bTickets.get(0);
+            boolean newStatus = !firstTicket.isUsed();
+            firstTicket.setUsed(newStatus);
+            firstTicket.setScannedAt(newStatus ? LocalDateTime.now() : null);
+            if (newStatus) {
+                userRepository.findById(currentUserId).ifPresent(firstTicket::setScannedBy);
+            } else {
+                firstTicket.setScannedBy(null);
+            }
+            ticketRepository.save(firstTicket);
+            return newStatus;
+        }
 
-        return newStatus;
+        return false;
     }
 
-    public EventAnalyticsDto buildEventAnalytics(Event event, List<Booking> bookings) {
+    public EventAnalyticsDto buildEventAnalytics(Event event, List<Booking> bookings, List<Ticket> tickets, List<TicketTier> tiers) {
         EventAnalyticsDto dto = new EventAnalyticsDto();
         dto.setEventId(event.getId());
         dto.setTitle(event.getTitle());
@@ -140,113 +187,97 @@ public class EventAnalyticsService {
         dto.setBookingEndDate(event.getBookingEndDate());
         dto.setStatus(event.getStatus());
         dto.setOrganizerName(event.getOrganizer() != null ? event.getOrganizer().getFullName() : "Organizer");
-        dto.setTotalCapacity(event.getTotalCapacity());
 
-        int normalSold = 0, vipSold = 0, vvipSold = 0;
-        int normalScanned = 0, vipScanned = 0, vvipScanned = 0;
-        BigDecimal normalRevenue = BigDecimal.ZERO;
-        BigDecimal vipRevenue = BigDecimal.ZERO;
-        BigDecimal vvipRevenue = BigDecimal.ZERO;
+        int totalCap = tiers != null && !tiers.isEmpty()
+                ? tiers.stream().mapToInt(TicketTier::getTotalCapacity).sum()
+                : 0;
+        dto.setTotalCapacity(totalCap);
 
+        // 1. Build Guest Manifest rows
         List<AttendeeBookingDto> bookingDtos = new ArrayList<>();
-
-        for (Booking b : bookings) {
-            int qty = b.getQuantity();
-            BigDecimal amount = b.getTotalAmount() != null ? b.getTotalAmount() : BigDecimal.ZERO;
-            boolean scanned = b.isUsed();
-
-            if (b.getPassType() != null) {
-                switch (b.getPassType()) {
-                    case NORMAL -> {
-                        normalSold += qty;
-                        normalRevenue = normalRevenue.add(amount);
-                        if (scanned) normalScanned += qty;
-                    }
-                    case VIP -> {
-                        vipSold += qty;
-                        vipRevenue = vipRevenue.add(amount);
-                        if (scanned) vipScanned += qty;
-                    }
-                    case VVIP -> {
-                        vvipSold += qty;
-                        vvipRevenue = vvipRevenue.add(amount);
-                        if (scanned) vvipScanned += qty;
-                    }
-                }
+        if (tickets != null && !tickets.isEmpty()) {
+            for (Ticket t : tickets) {
+                AttendeeBookingDto row = new AttendeeBookingDto();
+                row.setTicketId(t.getId());
+                row.setBookingId(t.getBooking() != null ? t.getBooking().getId() : null);
+                row.setOrderNumber(t.getBooking() != null ? t.getBooking().getOrderNumber() : "ORD-" + t.getId());
+                row.setTicketCode(t.getTicketCode());
+                row.setAttendeeName(t.getAttendeeName());
+                row.setAttendeeEmail(t.getBooking() != null && t.getBooking().getAttendee() != null
+                        ? t.getBooking().getAttendee().getEmail() : "N/A");
+                row.setTierName(t.getTicketTier() != null ? t.getTicketTier().getName() : "Standard");
+                row.setQuantity(1);
+                row.setUnitPrice(t.getTicketTier() != null ? t.getTicketTier().getPrice() : BigDecimal.ZERO);
+                row.setTotalAmount(row.getUnitPrice());
+                row.setUsed(t.isUsed());
+                row.setScannedAt(t.getScannedAt());
+                row.setScannedByName(t.getScannedBy() != null ? t.getScannedBy().getFullName() : null);
+                row.setBookedAt(t.getBooking() != null ? t.getBooking().getBookedAt() : null);
+                bookingDtos.add(row);
             }
-
-            String attendeeName = b.getAttendee() != null ? b.getAttendee().getFullName() : "Guest";
-            String attendeeEmail = b.getAttendee() != null ? b.getAttendee().getEmail() : "N/A";
-
-            bookingDtos.add(new AttendeeBookingDto(
-                    b.getId(),
-                    b.getTicketCode(),
-                    attendeeName,
-                    attendeeEmail,
-                    b.getPassType(),
-                    b.getQuantity(),
-                    b.getUnitPrice(),
-                    b.getTotalAmount(),
-                    b.isUsed(),
-                    b.getScannedAt(),
-                    b.getBookedAt()
-            ));
         }
-
         dto.setBookings(bookingDtos);
         dto.setTotalOrders(bookings.size());
 
-        PassTierAnalyticsDto normalDto = new PassTierAnalyticsDto(
-                PassType.NORMAL,
-                event.getNormalPrice(),
-                event.getNormalCapacity(),
-                normalSold,
-                event.getNormalAvailable(),
-                normalRevenue,
-                normalScanned
-        );
+        // 2. Build Dynamic Pass Tier Analytics
+        List<PassTierAnalyticsDto> tierDtoList = new ArrayList<>();
+        int totalSold = 0;
+        int totalScanned = 0;
+        BigDecimal totalRevenue = BigDecimal.ZERO;
+        int totalAvail = 0;
 
-        PassTierAnalyticsDto vipDto = new PassTierAnalyticsDto(
-                PassType.VIP,
-                event.getVipPrice(),
-                event.getVipCapacity(),
-                vipSold,
-                event.getVipAvailable(),
-                vipRevenue,
-                vipScanned
-        );
+        if (tiers != null && !tiers.isEmpty()) {
+            for (TicketTier tier : tiers) {
+                int sold = tier.getTotalCapacity() - tier.getAvailableCapacity();
+                if (sold < 0) sold = 0;
 
-        PassTierAnalyticsDto vvipDto = new PassTierAnalyticsDto(
-                PassType.VVIP,
-                event.getVvipPrice(),
-                event.getVvipCapacity(),
-                vvipSold,
-                event.getVvipAvailable(),
-                vvipRevenue,
-                vvipScanned
-        );
+                long scannedCount = tickets != null
+                        ? tickets.stream().filter(t -> t.getTicketTier() != null && t.getTicketTier().getId().equals(tier.getId()) && t.isUsed()).count()
+                        : 0;
 
-        dto.setNormal(normalDto);
-        dto.setVip(vipDto);
-        dto.setVvip(vvipDto);
+                BigDecimal rev = tier.getPrice().multiply(BigDecimal.valueOf(sold));
 
-        int totalSold = normalSold + vipSold + vvipSold;
-        BigDecimal totalRevenue = normalRevenue.add(vipRevenue).add(vvipRevenue);
-        int totalScanned = normalScanned + vipScanned + vvipScanned;
-        int totalAvailable = event.getNormalAvailable() + event.getVipAvailable() + event.getVvipAvailable();
+                PassTierAnalyticsDto pDto = new PassTierAnalyticsDto(
+                        tier.getId(),
+                        tier.getName(),
+                        tier.getPrice(),
+                        tier.getTotalCapacity(),
+                        sold,
+                        tier.getAvailableCapacity(),
+                        rev,
+                        (int) scannedCount
+                );
+                tierDtoList.add(pDto);
 
+                totalSold += sold;
+                totalScanned += (int) scannedCount;
+                totalRevenue = totalRevenue.add(rev);
+                totalAvail += tier.getAvailableCapacity();
+
+                // Map standard names to normal/vip/vvip
+                if (tier.getName().equalsIgnoreCase("Normal Pass")) dto.setNormal(pDto);
+                else if (tier.getName().equalsIgnoreCase("VIP Pass")) dto.setVip(pDto);
+                else if (tier.getName().equalsIgnoreCase("VVIP Pass")) dto.setVvip(pDto);
+            }
+        }
+
+        // Fill fallback tiers if empty
+        if (dto.getNormal() == null) dto.setNormal(new PassTierAnalyticsDto(PassType.NORMAL, BigDecimal.ZERO, 0, 0, 0, BigDecimal.ZERO, 0));
+        if (dto.getVip() == null) dto.setVip(new PassTierAnalyticsDto(PassType.VIP, BigDecimal.ZERO, 0, 0, 0, BigDecimal.ZERO, 0));
+        if (dto.getVvip() == null) dto.setVvip(new PassTierAnalyticsDto(PassType.VVIP, BigDecimal.ZERO, 0, 0, 0, BigDecimal.ZERO, 0));
+
+        dto.setTiers(tierDtoList);
         dto.setTotalSold(totalSold);
         dto.setTotalRevenue(totalRevenue);
         dto.setTotalScanned(totalScanned);
-        dto.setTotalAvailable(totalAvailable);
+        dto.setTotalAvailable(totalAvail);
         dto.setRemainingAttendees(Math.max(0, totalSold - totalScanned));
 
         if (bookings.size() > 0 && totalRevenue.compareTo(BigDecimal.ZERO) > 0) {
             dto.setAverageOrderValue(totalRevenue.divide(BigDecimal.valueOf(bookings.size()), 2, RoundingMode.HALF_UP));
         }
 
-        int cap = event.getTotalCapacity();
-        dto.setSoldPercentage(cap > 0 ? ((double) totalSold / cap) * 100.0 : 0.0);
+        dto.setSoldPercentage(totalCap > 0 ? ((double) totalSold / totalCap) * 100.0 : 0.0);
         dto.setCheckInPercentage(totalSold > 0 ? ((double) totalScanned / totalSold) * 100.0 : 0.0);
 
         // Staff Crew Roster
@@ -282,7 +313,6 @@ public class EventAnalyticsService {
     private String extractTicketCode(String raw) {
         if (raw == null) return "";
         raw = raw.trim();
-        // If raw is barcode/QR content e.g. QUICKPASS|CODE:QP-12345678|EVENT:1|...
         if (raw.startsWith("QUICKPASS|") || raw.contains("|CODE:")) {
             for (String part : raw.split("\\|")) {
                 if (part.startsWith("CODE:")) {
@@ -293,4 +323,3 @@ public class EventAnalyticsService {
         return raw;
     }
 }
-

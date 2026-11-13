@@ -37,6 +37,9 @@ public class CreateEventRequest {
     private BigDecimal vvipPrice = BigDecimal.ZERO;
     private int vvipCapacity = 0;
 
+    // Dynamic Ticket Tiers
+    private java.util.List<CreateTicketTierRequest> tiers = new java.util.ArrayList<>();
+
     public CreateEventRequest() {
     }
 
@@ -143,6 +146,14 @@ public class CreateEventRequest {
 
     public void setVvipCapacity(int vvipCapacity) {
         this.vvipCapacity = vvipCapacity;
+    }
+
+    public java.util.List<CreateTicketTierRequest> getTiers() {
+        return tiers;
+    }
+
+    public void setTiers(java.util.List<CreateTicketTierRequest> tiers) {
+        this.tiers = tiers;
     }
 }
 

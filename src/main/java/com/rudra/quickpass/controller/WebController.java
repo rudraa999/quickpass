@@ -111,11 +111,11 @@ public class WebController {
         return "register";
     }
 
-    @GetMapping("/dashboard")
+    @GetMapping({"/dashboard", "/events"})
     public String dashboard(Model model) {
         CustomUserDetails user = getCurrentUserDetails();
         if (user == null) {
-            return "redirect:/login";
+            return "redirect:/login?redirect=/events";
         }
         populateUserHeader(model, user);
 
@@ -128,7 +128,7 @@ public class WebController {
     public String organizerHub(Model model) {
         CustomUserDetails user = getCurrentUserDetails();
         if (user == null) {
-            return "redirect:/login";
+            return "redirect:/login?redirect=/organizer";
         }
         populateUserHeader(model, user);
 
@@ -141,7 +141,7 @@ public class WebController {
     public String organizerEventDashboard(@PathVariable Long id, Model model) {
         CustomUserDetails user = getCurrentUserDetails();
         if (user == null) {
-            return "redirect:/login";
+            return "redirect:/login?redirect=/organizer/events/" + id;
         }
         populateUserHeader(model, user);
 
@@ -161,7 +161,7 @@ public class WebController {
     public String createEventPage(Model model) {
         CustomUserDetails user = getCurrentUserDetails();
         if (user == null) {
-            return "redirect:/login";
+            return "redirect:/login?redirect=/organizer/create-event";
         }
         populateUserHeader(model, user);
         return "create-event";
@@ -176,7 +176,7 @@ public class WebController {
     public String myBookings(Model model) {
         CustomUserDetails user = getCurrentUserDetails();
         if (user == null) {
-            return "redirect:/login";
+            return "redirect:/login?redirect=/my-bookings";
         }
         populateUserHeader(model, user);
 
@@ -192,7 +192,7 @@ public class WebController {
     ) {
         CustomUserDetails user = getCurrentUserDetails();
         if (user == null) {
-            return "redirect:/login";
+            return "redirect:/login?redirect=/admin";
         }
         // Strict permission check: only ROLE_ADMIN is allowed to view admin portal
         if (!Role.ROLE_ADMIN.name().equals(user.getRole())) {
@@ -220,7 +220,7 @@ public class WebController {
     public String staffEvents(Model model) {
         CustomUserDetails user = getCurrentUserDetails();
         if (user == null) {
-            return "redirect:/login";
+            return "redirect:/login?redirect=/staff/events";
         }
         populateUserHeader(model, user);
 
@@ -247,7 +247,7 @@ public class WebController {
     public String staffScannerPortal(@PathVariable Long id, Model model) {
         CustomUserDetails user = getCurrentUserDetails();
         if (user == null) {
-            return "redirect:/login";
+            return "redirect:/login?redirect=/staff/events/" + id;
         }
         populateUserHeader(model, user);
 
@@ -278,7 +278,7 @@ public class WebController {
     public String accountPage(Model model) {
         CustomUserDetails user = getCurrentUserDetails();
         if (user == null) {
-            return "redirect:/login";
+            return "redirect:/login?redirect=/account";
         }
         populateUserHeader(model, user);
         return "account";

@@ -756,8 +756,8 @@
 
                                 <td class="p-4">
                                     <span class="px-2 py-0.5 rounded-md text-[10px] font-extrabold uppercase"
-                                          th:classappend="${b.passType.name() == 'VVIP' ? 'bg-purple-100 text-purple-800' : (b.passType.name() == 'VIP' ? 'bg-indigo-100 text-indigo-800' : 'bg-slate-100 text-slate-800')}"
-                                          th:text="${b.passType}">
+                                          th:classappend="${(b.passType != null && b.passType.name() == 'VVIP') || (b.tierName != null && b.tierName.contains('VVIP')) ? 'bg-purple-100 text-purple-800' : ((b.passType != null && b.passType.name() == 'VIP') || (b.tierName != null && b.tierName.contains('VIP')) ? 'bg-indigo-100 text-indigo-800' : 'bg-slate-100 text-slate-800')}"
+                                          th:text="${b.tierName != null ? b.tierName : (b.passType != null ? b.passType.name() : 'Standard')}">
                                         VIP
                                     </span>
                                     <span class="text-slate-500 font-semibold ml-1">&times; <span th:text="${b.quantity}">1</span></span>

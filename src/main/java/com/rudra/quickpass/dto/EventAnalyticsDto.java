@@ -36,6 +36,7 @@ public class EventAnalyticsDto {
     private PassTierAnalyticsDto normal;
     private PassTierAnalyticsDto vip;
     private PassTierAnalyticsDto vvip;
+    private List<PassTierAnalyticsDto> tiers = new ArrayList<>();
 
     // Full Attendee Guest List
     private List<AttendeeBookingDto> bookings = new ArrayList<>();
@@ -245,5 +246,12 @@ public class EventAnalyticsDto {
     public void setStaffMembers(List<StaffMemberDto> staffMembers) {
         this.staffMembers = staffMembers;
     }
-}
 
+    public List<PassTierAnalyticsDto> getTiers() {
+        return tiers;
+    }
+
+    public void setTiers(List<PassTierAnalyticsDto> tiers) {
+        this.tiers = tiers;
+    }
+}

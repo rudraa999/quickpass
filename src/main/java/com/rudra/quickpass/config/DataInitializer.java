@@ -73,18 +73,10 @@ public class DataInitializer implements CommandLineRunner {
             sampleEvent.setBookingStartDate(LocalDateTime.now().minusDays(2));
             sampleEvent.setBookingEndDate(LocalDateTime.now().plusDays(19));
 
-            // Passes configuration
-            sampleEvent.setNormalPrice(BigDecimal.valueOf(49.00));
-            sampleEvent.setNormalCapacity(150);
-            sampleEvent.setNormalAvailable(150);
-
-            sampleEvent.setVipPrice(BigDecimal.valueOf(129.00));
-            sampleEvent.setVipCapacity(50);
-            sampleEvent.setVipAvailable(50);
-
-            sampleEvent.setVvipPrice(BigDecimal.valueOf(299.00));
-            sampleEvent.setVvipCapacity(15);
-            sampleEvent.setVvipAvailable(15);
+            // Dynamic Ticket Tiers
+            sampleEvent.addTier(new com.rudra.quickpass.entity.TicketTier(sampleEvent, "Normal Pass", BigDecimal.valueOf(49.00), 150, 150));
+            sampleEvent.addTier(new com.rudra.quickpass.entity.TicketTier(sampleEvent, "VIP Pass", BigDecimal.valueOf(129.00), 50, 50));
+            sampleEvent.addTier(new com.rudra.quickpass.entity.TicketTier(sampleEvent, "VVIP Pass", BigDecimal.valueOf(299.00), 15, 15));
 
             sampleEvent.setStatus(EventStatus.APPROVED);
             sampleEvent.setOrganizer(admin);

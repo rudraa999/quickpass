@@ -14,6 +14,9 @@ public class AdminBookingDto {
     private String attendeeName;
     private String attendeeEmail;
     private PassType passType;
+    private String tierName;
+    private String orderNumber;
+    private String scannedByName;
     private int quantity;
     private BigDecimal unitPrice;
     private BigDecimal totalAmount;
@@ -158,6 +161,30 @@ public class AdminBookingDto {
 
     public void setBookedAt(LocalDateTime bookedAt) {
         this.bookedAt = bookedAt;
+    }
+
+    public String getTierName() {
+        return tierName != null ? tierName : (passType != null ? passType.name() : "Standard");
+    }
+
+    public void setTierName(String tierName) {
+        this.tierName = tierName;
+    }
+
+    public String getOrderNumber() {
+        return orderNumber;
+    }
+
+    public void setOrderNumber(String orderNumber) {
+        this.orderNumber = orderNumber;
+    }
+
+    public String getScannedByName() {
+        return scannedByName;
+    }
+
+    public void setScannedByName(String scannedByName) {
+        this.scannedByName = scannedByName;
     }
 }
 

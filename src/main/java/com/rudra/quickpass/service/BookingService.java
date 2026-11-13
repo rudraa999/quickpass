@@ -1,17 +1,17 @@
 package com.rudra.quickpass.service;
 
 import com.rudra.quickpass.dto.BookPassRequest;
-import com.rudra.quickpass.entity.Booking;
-import com.rudra.quickpass.entity.Event;
-import com.rudra.quickpass.entity.EventStatus;
-import com.rudra.quickpass.entity.User;
+import com.rudra.quickpass.entity.*;
 import com.rudra.quickpass.repository.BookingRepository;
 import com.rudra.quickpass.repository.EventRepository;
+import com.rudra.quickpass.repository.TicketRepository;
+import com.rudra.quickpass.repository.TicketTierRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
@@ -20,13 +20,19 @@ public class BookingService {
 
     private final BookingRepository bookingRepository;
     private final EventRepository eventRepository;
+    private final TicketTierRepository ticketTierRepository;
+    private final TicketRepository ticketRepository;
     private final QrCodeService qrCodeService;
 
     public BookingService(BookingRepository bookingRepository,
                           EventRepository eventRepository,
+                          TicketTierRepository ticketTierRepository,
+                          TicketRepository ticketRepository,
                           QrCodeService qrCodeService) {
         this.bookingRepository = bookingRepository;
         this.eventRepository = eventRepository;
+        this.ticketTierRepository = ticketTierRepository;
+        this.ticketRepository = ticketRepository;
         this.qrCodeService = qrCodeService;
     }
 
@@ -47,54 +53,80 @@ public class BookingService {
             throw new IllegalArgumentException("Booking for this event has already closed.");
         }
 
-        BigDecimal unitPrice;
         int qty = req.getQuantity();
-
-        switch (req.getPassType()) {
-            case NORMAL -> {
-                if (event.getNormalAvailable() < qty) {
-                    throw new IllegalArgumentException("Not enough Normal passes available. Remaining: " + event.getNormalAvailable());
-                }
-                unitPrice = event.getNormalPrice();
-                event.setNormalAvailable(event.getNormalAvailable() - qty);
-            }
-            case VIP -> {
-                if (event.getVipAvailable() < qty) {
-                    throw new IllegalArgumentException("Not enough VIP passes available. Remaining: " + event.getVipAvailable());
-                }
-                unitPrice = event.getVipPrice();
-                event.setVipAvailable(event.getVipAvailable() - qty);
-            }
-            case VVIP -> {
-                if (event.getVvipAvailable() < qty) {
-                    throw new IllegalArgumentException("Not enough VVIP passes available. Remaining: " + event.getVvipAvailable());
-                }
-                unitPrice = event.getVvipPrice();
-                event.setVvipAvailable(event.getVvipAvailable() - qty);
-            }
-            default -> throw new IllegalArgumentException("Invalid pass type: " + req.getPassType());
+        if (qty <= 0) {
+            throw new IllegalArgumentException("Quantity must be at least 1");
         }
 
-        eventRepository.save(event);
+        // 1. Resolve Ticket Tier
+        TicketTier tier = null;
+        if (req.getTierId() != null) {
+            tier = ticketTierRepository.findById(req.getTierId())
+                    .orElseThrow(() -> new IllegalArgumentException("Selected ticket tier not found"));
+            if (!tier.getEvent().getId().equals(event.getId())) {
+                throw new IllegalArgumentException("Ticket tier does not belong to this event");
+            }
+        } else if (req.getPassType() != null) {
+            String targetName = switch (req.getPassType()) {
+                case NORMAL -> "Normal Pass";
+                case VIP -> "VIP Pass";
+                case VVIP -> "VVIP Pass";
+            };
+            tier = ticketTierRepository.findByEventIdAndName(event.getId(), targetName)
+                    .orElseGet(() -> {
+                        List<TicketTier> tiers = ticketTierRepository.findByEventIdOrderByIdAsc(event.getId());
+                        if (!tiers.isEmpty()) return tiers.get(0);
+                        throw new IllegalArgumentException("No ticket tier found matching " + req.getPassType());
+                    });
+        } else {
+            List<TicketTier> tiers = ticketTierRepository.findByEventIdOrderByIdAsc(event.getId());
+            if (!tiers.isEmpty()) {
+                tier = tiers.get(0);
+            } else {
+                throw new IllegalArgumentException("No ticket tiers available for this event");
+            }
+        }
 
-        // Generate unique ticket code
-        String ticketCode = "QP-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase();
+        // 2. Check Capacity & Decrement
+        if (tier.getAvailableCapacity() < qty) {
+            throw new IllegalArgumentException("Not enough " + tier.getName() + " passes available. Remaining: " + tier.getAvailableCapacity());
+        }
+        tier.setAvailableCapacity(tier.getAvailableCapacity() - qty);
+        ticketTierRepository.save(tier);
 
-        // Generate QR code data
-        String qrPayload = String.format("QUICKPASS|CODE:%s|EVENT:%d|USER:%s|TYPE:%s|QTY:%d",
-                ticketCode, event.getId(), attendee.getEmail(), req.getPassType(), qty);
+        BigDecimal unitPrice = tier.getPrice();
+        BigDecimal totalAmount = unitPrice.multiply(BigDecimal.valueOf(qty));
 
-        String qrCodeBase64 = qrCodeService.generateQrCodeBase64(qrPayload, 260, 260);
-
+        // 3. Create Booking (Order Container)
+        String orderNumber = "ORD-" + System.currentTimeMillis() + "-" + UUID.randomUUID().toString().substring(0, 4).toUpperCase();
         Booking booking = new Booking();
-        booking.setTicketCode(ticketCode);
+        booking.setOrderNumber(orderNumber);
         booking.setAttendee(attendee);
         booking.setEvent(event);
-        booking.setPassType(req.getPassType());
-        booking.setQuantity(qty);
-        booking.setUnitPrice(unitPrice);
-        booking.setTotalAmount(unitPrice.multiply(BigDecimal.valueOf(qty)));
-        booking.setQrCodeBase64(qrCodeBase64);
+        booking.setTotalQuantity(qty);
+        booking.setTotalAmount(totalAmount);
+        booking.setStatus("CONFIRMED");
+
+        // 4. Generate N distinct Individual Ticket passes
+        List<String> attendeeNames = req.getAttendeeNames();
+
+        for (int i = 1; i <= qty; i++) {
+            String ticketCode = "QP-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase();
+            
+            String ticketAttendeeName = attendee.getFullName();
+            if (attendeeNames != null && attendeeNames.size() >= i && attendeeNames.get(i - 1) != null && !attendeeNames.get(i - 1).trim().isEmpty()) {
+                ticketAttendeeName = attendeeNames.get(i - 1).trim();
+            } else if (qty > 1) {
+                ticketAttendeeName = attendee.getFullName() + (i == 1 ? " (Primary)" : " (Guest " + i + ")");
+            }
+
+            String qrPayload = String.format("QUICKPASS|CODE:%s|EVENT:%d|USER:%s|TIER:%s|TICKET:%d/%d",
+                    ticketCode, event.getId(), attendee.getEmail(), tier.getName(), i, qty);
+            String qrCodeBase64 = qrCodeService.generateQrCodeBase64(qrPayload, 260, 260);
+
+            Ticket ticket = new Ticket(booking, tier, event, ticketCode, ticketAttendeeName, qrCodeBase64);
+            booking.addTicket(ticket);
+        }
 
         return bookingRepository.save(booking);
     }
@@ -112,4 +144,3 @@ public class BookingService {
         return bookingRepository.findByEventIdOrderByBookedAtDesc(eventId);
     }
 }
-

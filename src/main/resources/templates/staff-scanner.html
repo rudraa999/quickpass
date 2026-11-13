@@ -1,19 +1,25 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org" lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title th:text="'QuickPass Staff Scanner &bull; ' + ${event.title}">QuickPass &bull; Staff Scanner</title>
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap"
+        rel="stylesheet">
     <!-- html5-qrcode for browser camera QR scanning -->
     <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
     <style>
-        body { font-family: 'Plus Jakarta Sans', sans-serif; }
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+        }
     </style>
 </head>
-<body class="bg-slate-50 text-slate-800 min-h-screen flex flex-col antialiased selection:bg-amber-100 selection:text-amber-800">
+
+<body
+    class="bg-slate-50 text-slate-800 min-h-screen flex flex-col antialiased selection:bg-amber-100 selection:text-amber-800">
 
     <!-- Top Navigation Bar -->
     <nav class="bg-white border-b border-slate-200 sticky top-0 z-50 shadow-sm">
@@ -21,16 +27,19 @@
             <div class="flex items-center justify-between h-16">
                 <!-- Brand & Back to Staff Events -->
                 <div class="flex items-center space-x-6">
-                    <a th:href="@{/staff/events}" class="flex items-center space-x-2 text-xs font-bold text-slate-500 hover:text-slate-800 transition">
+                    <a th:href="@{/staff/events}"
+                        class="flex items-center space-x-2 text-xs font-bold text-slate-500 hover:text-slate-800 transition">
                         <span>&larr;</span>
                         <span>Back to Assigned Events</span>
                     </a>
                     <span class="text-slate-300">|</span>
                     <div class="flex items-center space-x-2">
-                        <span class="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-amber-100 text-amber-800 uppercase tracking-wider">
+                        <span
+                            class="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-amber-100 text-amber-800 uppercase tracking-wider">
                             Gate Control
                         </span>
-                        <h2 class="text-sm font-extrabold text-slate-900 truncate max-w-xs sm:max-w-md" th:text="${event.title}">
+                        <h2 class="text-sm font-extrabold text-slate-900 truncate max-w-xs sm:max-w-md"
+                            th:text="${event.title}">
                             Event Name
                         </h2>
                     </div>
@@ -44,7 +53,7 @@
                     </div>
 
                     <button type="button" onclick="logoutUser()"
-                       class="inline-flex items-center space-x-1 px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-rose-50 text-slate-700 hover:text-rose-600 text-xs font-semibold transition border border-slate-200 cursor-pointer">
+                        class="inline-flex items-center space-x-1 px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-rose-50 text-slate-700 hover:text-rose-600 text-xs font-semibold transition border border-slate-200 cursor-pointer">
                         <span>Logout</span>
                     </button>
                 </div>
@@ -53,12 +62,12 @@
     </nav>
 
     <!-- Main Container -->
-    <main id="staffScannerRoot"
-          th:attr="data-event-id=${event.id}, data-event-title=${event.title}"
-          class="flex-grow max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 w-full space-y-6">
+    <main id="staffScannerRoot" th:attr="data-event-id=${event.id}, data-event-title=${event.title}"
+        class="flex-grow max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 w-full space-y-6">
 
         <!-- Top Logistics & Counters Card -->
-        <div class="bg-white rounded-3xl p-6 border border-slate-200/90 shadow-sm flex flex-col md:flex-row md:items-center md:justify-between gap-6">
+        <div
+            class="bg-white rounded-3xl p-6 border border-slate-200/90 shadow-sm flex flex-col md:flex-row md:items-center md:justify-between gap-6">
             <div class="space-y-1">
                 <div class="flex items-center space-x-2 text-xs text-slate-400">
                     <span class="text-rose-500 font-bold">📍</span>
@@ -75,16 +84,19 @@
                 <div class="px-5 py-3 rounded-2xl bg-emerald-50 border border-emerald-200 text-center">
                     <span class="text-[10px] font-bold uppercase tracking-wider text-emerald-700 block">Admitted</span>
                     <span class="text-2xl font-black text-emerald-800">
-                        <span id="staffAdmittedDisplay" th:text="${totalScanned}">0</span> / <span th:text="${totalSold}">0</span>
+                        <span id="staffAdmittedDisplay" th:text="${totalScanned}">0</span> / <span
+                            th:text="${totalSold}">0</span>
                     </span>
                 </div>
                 <div class="px-5 py-3 rounded-2xl bg-amber-50 border border-amber-200 text-center">
-                    <span class="text-[10px] font-bold uppercase tracking-wider text-amber-700 block">Pending Arrival</span>
+                    <span class="text-[10px] font-bold uppercase tracking-wider text-amber-700 block">Pending
+                        Arrival</span>
                     <span id="staffPendingDisplay" class="text-2xl font-black text-amber-800"
-                          th:text="${totalSold - totalScanned}">0</span>
+                        th:text="${totalSold - totalScanned}">0</span>
                 </div>
                 <div class="px-5 py-3 rounded-2xl bg-indigo-50 border border-indigo-200 text-center">
-                    <span class="text-[10px] font-bold uppercase tracking-wider text-indigo-700 block">Gate Velocity</span>
+                    <span class="text-[10px] font-bold uppercase tracking-wider text-indigo-700 block">Gate
+                        Velocity</span>
                     <span class="text-2xl font-black text-indigo-800">
                         <span id="staffRateDisplay" th:text="${#numbers.formatDecimal(checkInRate, 1, 1)}">0.0</span>%
                     </span>
@@ -101,7 +113,8 @@
                 <div class="bg-white rounded-3xl p-6 border border-slate-200/90 shadow-sm space-y-4">
                     <div class="flex items-center justify-between">
                         <div class="flex items-center space-x-2">
-                            <div class="w-8 h-8 rounded-xl bg-amber-100 text-amber-800 flex items-center justify-center font-bold text-sm">
+                            <div
+                                class="w-8 h-8 rounded-xl bg-amber-100 text-amber-800 flex items-center justify-center font-bold text-sm">
                                 📷
                             </div>
                             <div>
@@ -112,14 +125,15 @@
 
                         <!-- Camera Toggle Button -->
                         <button type="button" id="cameraToggleBtn" onclick="toggleCameraScanner()"
-                                class="px-3 py-1.5 rounded-xl text-xs font-bold bg-slate-100 hover:bg-slate-200 text-slate-700 transition flex items-center space-x-1">
+                            class="px-3 py-1.5 rounded-xl text-xs font-bold bg-slate-100 hover:bg-slate-200 text-slate-700 transition flex items-center space-x-1">
                             <span>📷</span>
                             <span id="cameraToggleText">Start Camera</span>
                         </button>
                     </div>
 
                     <!-- Camera Viewport (Hidden until toggled) -->
-                    <div id="cameraScannerWrapper" class="hidden rounded-2xl overflow-hidden border border-amber-300 bg-slate-900 relative">
+                    <div id="cameraScannerWrapper"
+                        class="hidden rounded-2xl overflow-hidden border border-amber-300 bg-slate-900 relative">
                         <div id="cameraReader" class="w-full"></div>
                         <div class="p-2 text-center text-[11px] bg-slate-950/80 text-amber-300 font-medium">
                             Point camera at attendee QR code
@@ -130,10 +144,10 @@
                     <form onsubmit="handleStaffScan(event)" class="space-y-3">
                         <div class="relative">
                             <input type="text" id="staffTicketInput" autofocus autocomplete="off"
-                                   placeholder="e.g. QP-A1B2C3D4 or scan QR code"
-                                   class="w-full px-4 py-3.5 pr-24 rounded-2xl border border-slate-300 focus:ring-2 focus:ring-amber-500 focus:outline-none text-sm font-mono font-bold tracking-wider uppercase text-slate-900 placeholder:normal-case placeholder:font-sans placeholder:font-normal">
+                                placeholder="e.g. QP-A1B2C3D4 or scan QR code"
+                                class="w-full px-4 py-3.5 pr-24 rounded-2xl border border-slate-300 focus:ring-2 focus:ring-amber-500 focus:outline-none text-sm font-mono font-bold tracking-wider uppercase text-slate-900 placeholder:normal-case placeholder:font-sans placeholder:font-normal">
                             <button type="submit" id="staffScanBtn"
-                                    class="absolute right-1.5 top-1.5 bottom-1.5 px-4 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-extrabold text-xs transition shadow-sm">
+                                class="absolute right-1.5 top-1.5 bottom-1.5 px-4 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-extrabold text-xs transition shadow-sm">
                                 Verify
                             </button>
                         </div>
@@ -153,8 +167,10 @@
             </div>
 
             <!-- RIGHT PANE: Live Attendee Manifest & Search -->
-            <div class="lg:col-span-7 bg-white rounded-3xl border border-slate-200/90 shadow-sm overflow-hidden flex flex-col">
-                <div class="p-5 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            <div
+                class="lg:col-span-7 bg-white rounded-3xl border border-slate-200/90 shadow-sm overflow-hidden flex flex-col">
+                <div
+                    class="p-5 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                     <div>
                         <h3 class="text-sm font-extrabold text-slate-900">Event Attendee Manifest</h3>
                         <p class="text-[11px] text-slate-400">Search attendees and manually check in if required</p>
@@ -163,10 +179,12 @@
                     <!-- Search Input -->
                     <div class="relative">
                         <input type="text" id="manifestSearchInput" onkeyup="filterManifestRows()"
-                               placeholder="Search name, email, code..."
-                               class="pl-8 pr-3 py-1.5 rounded-xl border border-slate-200 text-xs focus:ring-2 focus:ring-amber-500 focus:outline-none w-56">
-                        <svg class="w-4 h-4 text-slate-400 absolute left-2.5 top-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+                            placeholder="Search name, email, code..."
+                            class="pl-8 pr-3 py-1.5 rounded-xl border border-slate-200 text-xs focus:ring-2 focus:ring-amber-500 focus:outline-none w-56">
+                        <svg class="w-4 h-4 text-slate-400 absolute left-2.5 top-2" fill="none" stroke="currentColor"
+                            viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                         </svg>
                     </div>
                 </div>
@@ -174,7 +192,8 @@
                 <!-- Manifest Table -->
                 <div class="overflow-x-auto max-h-[550px] overflow-y-auto">
                     <table class="w-full text-left text-xs text-slate-700">
-                        <thead class="bg-slate-50 sticky top-0 border-b border-slate-200 text-[10px] uppercase font-bold text-slate-500 z-10">
+                        <thead
+                            class="bg-slate-50 sticky top-0 border-b border-slate-200 text-[10px] uppercase font-bold text-slate-500 z-10">
                             <tr>
                                 <th class="p-3.5">Attendee</th>
                                 <th class="p-3.5">Ticket Code</th>
@@ -190,14 +209,16 @@
                                 </td>
                             </tr>
 
-                            <tr th:each="b : ${bookings}"
-                                class="hover:bg-slate-50/70 transition staff-manifest-row"
+                            <tr th:each="b : ${bookings}" class="hover:bg-slate-50/70 transition staff-manifest-row"
                                 th:id="'manifestRow-' + ${b.id}"
                                 th:attr="data-search=${#strings.toLowerCase((b.attendee != null ? b.attendee.fullName + ' ' + b.attendee.email : '') + ' ' + b.ticketCode)}, data-code=${b.ticketCode}">
 
                                 <td class="p-3.5">
-                                    <div class="font-extrabold text-slate-900" th:text="${b.attendee != null ? b.attendee.fullName : 'Guest'}">Attendee Name</div>
-                                    <div class="text-[11px] text-slate-400 font-normal" th:text="${b.attendee != null ? b.attendee.email : ''}">email</div>
+                                    <div class="font-extrabold text-slate-900"
+                                        th:text="${b.attendee != null ? b.attendee.fullName : 'Guest'}">Attendee Name
+                                    </div>
+                                    <div class="text-[11px] text-slate-400 font-normal"
+                                        th:text="${b.attendee != null ? b.attendee.email : ''}">email</div>
                                 </td>
 
                                 <td class="p-3.5 font-mono font-bold text-indigo-700" th:text="${b.ticketCode}">
@@ -205,20 +226,22 @@
                                 </td>
 
                                 <td class="p-3.5">
-                                    <span class="px-2 py-0.5 rounded-md text-[10px] font-extrabold uppercase"
-                                          th:classappend="${b.passType.name() == 'VVIP' ? 'bg-purple-100 text-purple-800' : (b.passType.name() == 'VIP' ? 'bg-indigo-100 text-indigo-800' : 'bg-slate-100 text-slate-800')}"
-                                          th:text="${b.passType}">
-                                        VIP
+                                    <span class="px-2 py-0.5 rounded-md text-[10px] font-extrabold uppercase bg-amber-50 text-amber-800 border border-amber-200"
+                                          th:text="${b.passType != null ? b.passType : 'Pass'}">
+                                        Pass
                                     </span>
-                                    <span class="text-slate-500 font-bold ml-1">&times; <span th:text="${b.quantity}">1</span></span>
+                                    <span class="text-slate-500 font-bold ml-1">&times; <span
+                                            th:text="${b.quantity}">1</span></span>
                                 </td>
 
                                 <td class="p-3.5" th:id="'staffStatusCell-' + ${b.id}">
-                                    <span th:if="${b.used}" class="px-2.5 py-1 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 flex items-center space-x-1 w-fit">
+                                    <span th:if="${b.used}"
+                                        class="px-2.5 py-1 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 flex items-center space-x-1 w-fit">
                                         <span>✓</span>
                                         <span>Checked In</span>
                                     </span>
-                                    <span th:if="${!b.used}" class="px-2.5 py-1 rounded-full text-[10px] font-bold bg-slate-100 text-slate-600 flex items-center space-x-1 w-fit">
+                                    <span th:if="${!b.used}"
+                                        class="px-2.5 py-1 rounded-full text-[10px] font-bold bg-slate-100 text-slate-600 flex items-center space-x-1 w-fit">
                                         <span>⏳</span>
                                         <span>Awaiting Entry</span>
                                     </span>
@@ -226,9 +249,9 @@
 
                                 <td class="p-3.5 text-right" th:id="'staffActionCell-' + ${b.id}">
                                     <button type="button"
-                                            th:attr="onclick='toggleStaffRowCheckIn(' + ${event.id} + ', ' + ${b.id} + ')'"
-                                            th:classappend="${b.used ? 'bg-slate-100 hover:bg-slate-200 text-slate-700' : 'bg-amber-50 hover:bg-amber-100 text-amber-800'}"
-                                            class="px-2.5 py-1 rounded-lg text-xs font-bold transition">
+                                        th:attr="onclick='toggleStaffRowCheckIn(' + ${event.id} + ', ' + ${b.id} + ')'"
+                                        th:classappend="${b.used ? 'bg-slate-100 hover:bg-slate-200 text-slate-700' : 'bg-amber-50 hover:bg-amber-100 text-amber-800'}"
+                                        class="px-2.5 py-1 rounded-lg text-xs font-bold transition">
                                         <span th:text="${b.used ? 'Undo' : 'Check In'}">Check In</span>
                                     </button>
                                 </td>
@@ -485,5 +508,5 @@
         }
     </script>
 </body>
-</html>
 
+</html>

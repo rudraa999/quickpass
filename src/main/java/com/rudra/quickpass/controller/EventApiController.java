@@ -21,6 +21,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -66,12 +67,27 @@ public class EventApiController {
 
         Map<String, Object> response = new HashMap<>();
         response.put("message", "Pass booked successfully!");
+        response.put("orderNumber", booking.getOrderNumber());
         response.put("ticketCode", booking.getTicketCode());
         response.put("eventName", booking.getEvent().getTitle());
-        response.put("passType", booking.getPassType().name());
+        response.put("passType", booking.getPassType() != null ? booking.getPassType() : "Standard");
         response.put("quantity", booking.getQuantity());
         response.put("totalAmount", booking.getTotalAmount());
         response.put("qrCodeBase64", booking.getQrCodeBase64());
+
+        List<Map<String, Object>> ticketsList = new ArrayList<>();
+        if (booking.getTickets() != null) {
+            for (com.rudra.quickpass.entity.Ticket t : booking.getTickets()) {
+                Map<String, Object> tMap = new HashMap<>();
+                tMap.put("id", t.getId());
+                tMap.put("ticketCode", t.getTicketCode());
+                tMap.put("attendeeName", t.getAttendeeName());
+                tMap.put("tierName", t.getTicketTier() != null ? t.getTicketTier().getName() : "Standard");
+                tMap.put("qrCodeBase64", t.getQrCodeBase64());
+                ticketsList.add(tMap);
+            }
+        }
+        response.put("tickets", ticketsList);
         return ResponseEntity.ok(response);
     }
 

@@ -24,8 +24,8 @@ public class EventService {
     private final PasswordEncoder passwordEncoder;
 
     public EventService(EventRepository eventRepository,
-                        UserRepository userRepository,
-                        PasswordEncoder passwordEncoder) {
+            UserRepository userRepository,
+            PasswordEncoder passwordEncoder) {
         this.eventRepository = eventRepository;
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
@@ -42,20 +42,34 @@ public class EventService {
         event.setBookingStartDate(req.getBookingStartDate());
         event.setBookingEndDate(req.getBookingEndDate());
 
-        // Normal Tier
-        event.setNormalPrice(req.getNormalPrice());
-        event.setNormalCapacity(req.getNormalCapacity());
-        event.setNormalAvailable(req.getNormalCapacity());
+        // Dynamic Ticket Tiers creation
+        if (req.getTiers() != null && !req.getTiers().isEmpty()) {
+            for (com.rudra.quickpass.dto.CreateTicketTierRequest tierReq : req.getTiers()) {
+                if (tierReq.getName() != null && !tierReq.getName().trim().isEmpty() && tierReq.getCapacity() != null && tierReq.getCapacity() > 0) {
+                    com.rudra.quickpass.entity.TicketTier tier = new com.rudra.quickpass.entity.TicketTier(
+                            event,
+                            tierReq.getName().trim(),
+                            tierReq.getPrice() != null ? tierReq.getPrice() : java.math.BigDecimal.ZERO,
+                            tierReq.getCapacity(),
+                            tierReq.getCapacity()
+                    );
+                    event.addTier(tier);
+                }
+            }
+        }
 
-        // VIP Tier
-        event.setVipPrice(req.getVipPrice());
-        event.setVipCapacity(req.getVipCapacity());
-        event.setVipAvailable(req.getVipCapacity());
-
-        // VVIP Tier
-        event.setVvipPrice(req.getVvipPrice());
-        event.setVvipCapacity(req.getVvipCapacity());
-        event.setVvipAvailable(req.getVvipCapacity());
+        // If no dynamic tiers were explicitly sent, create default tiers from form fields
+        if (event.getTiers().isEmpty()) {
+            if (req.getNormalCapacity() > 0) {
+                event.addTier(new com.rudra.quickpass.entity.TicketTier(event, "Normal Pass", req.getNormalPrice() != null ? req.getNormalPrice() : java.math.BigDecimal.ZERO, req.getNormalCapacity(), req.getNormalCapacity()));
+            }
+            if (req.getVipCapacity() > 0) {
+                event.addTier(new com.rudra.quickpass.entity.TicketTier(event, "VIP Pass", req.getVipPrice() != null ? req.getVipPrice() : java.math.BigDecimal.ZERO, req.getVipCapacity(), req.getVipCapacity()));
+            }
+            if (req.getVvipCapacity() > 0) {
+                event.addTier(new com.rudra.quickpass.entity.TicketTier(event, "VVIP Pass", req.getVvipPrice() != null ? req.getVvipPrice() : java.math.BigDecimal.ZERO, req.getVvipCapacity(), req.getVvipCapacity()));
+            }
+        }
 
         // New event starts as PENDING_APPROVAL
         event.setStatus(EventStatus.PENDING_APPROVAL);
@@ -86,7 +100,8 @@ public class EventService {
         Event event = getEventById(eventId);
         event.setStatus(EventStatus.APPROVED);
 
-        // When the event is approved by the admin, promote the creator's role to ROLE_ORGANIZER in the database
+        // When the event is approved by the admin, promote the creator's role to
+        // ROLE_ORGANIZER in the database
         User organizer = event.getOrganizer();
         if (organizer != null && organizer.getRole() != Role.ROLE_ADMIN) {
             organizer.setRole(Role.ROLE_ORGANIZER);
@@ -104,7 +119,8 @@ public class EventService {
     }
 
     @Transactional
-    public StaffMemberDto addStaffToEvent(Long eventId, String email, String fullName, Long currentUserId, boolean isAdmin) {
+    public StaffMemberDto addStaffToEvent(Long eventId, String email, String fullName, Long currentUserId,
+            boolean isAdmin) {
         Event event = getEventById(eventId);
         validateOrganizerAccess(event, currentUserId, isAdmin);
 
@@ -121,8 +137,7 @@ public class EventService {
                     displayName,
                     normalizedEmail,
                     passwordEncoder.encode("Staff@123"),
-                    Role.ROLE_STAFF
-            );
+                    Role.ROLE_STAFF);
             userRepository.save(staffUser);
         } else {
             // If existing user is standard attendee, upgrade their role to ROLE_STAFF
@@ -135,7 +150,8 @@ public class EventService {
         event.addStaffMember(staffUser);
         eventRepository.save(event);
 
-        return new StaffMemberDto(staffUser.getId(), staffUser.getFullName(), staffUser.getEmail(), staffUser.getRole().name());
+        return new StaffMemberDto(staffUser.getId(), staffUser.getFullName(), staffUser.getEmail(),
+                staffUser.getRole().name());
     }
 
     @Transactional
@@ -172,15 +188,16 @@ public class EventService {
     }
 
     private void validateOrganizerAccess(Event event, Long currentUserId, boolean isAdmin) {
-        if (isAdmin) return;
+        if (isAdmin)
+            return;
         if (event.getOrganizer() == null || !event.getOrganizer().getId().equals(currentUserId)) {
             throw new AccessDeniedException("Access denied: You are not the organizer of this event.");
         }
     }
 
     private String capitalize(String str) {
-        if (str == null || str.isEmpty()) return "Staff Member";
+        if (str == null || str.isEmpty())
+            return "Staff Member";
         return str.substring(0, 1).toUpperCase() + str.substring(1);
     }
 }
-

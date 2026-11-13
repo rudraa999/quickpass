@@ -4,13 +4,17 @@ import com.fasterxml.jackson.annotation.JsonFormat;
 import com.rudra.quickpass.entity.PassType;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.List;
 
 public class AttendeeBookingDto {
     private Long bookingId;
+    private Long ticketId;
+    private String orderNumber;
     private String ticketCode;
     private String attendeeName;
     private String attendeeEmail;
     private PassType passType;
+    private String tierName;
     private int quantity;
     private BigDecimal unitPrice;
     private BigDecimal totalAmount;
@@ -19,8 +23,12 @@ public class AttendeeBookingDto {
     @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss")
     private LocalDateTime scannedAt;
 
+    private String scannedByName;
+
     @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss")
     private LocalDateTime bookedAt;
+
+    private List<TicketDto> tickets;
 
     public AttendeeBookingDto() {
     }
@@ -33,6 +41,7 @@ public class AttendeeBookingDto {
         this.attendeeName = attendeeName;
         this.attendeeEmail = attendeeEmail;
         this.passType = passType;
+        this.tierName = passType != null ? passType.name() : "Standard";
         this.quantity = quantity;
         this.unitPrice = unitPrice;
         this.totalAmount = totalAmount;
@@ -47,6 +56,22 @@ public class AttendeeBookingDto {
 
     public void setBookingId(Long bookingId) {
         this.bookingId = bookingId;
+    }
+
+    public Long getTicketId() {
+        return ticketId;
+    }
+
+    public void setTicketId(Long ticketId) {
+        this.ticketId = ticketId;
+    }
+
+    public String getOrderNumber() {
+        return orderNumber;
+    }
+
+    public void setOrderNumber(String orderNumber) {
+        this.orderNumber = orderNumber;
     }
 
     public String getTicketCode() {
@@ -79,6 +104,14 @@ public class AttendeeBookingDto {
 
     public void setPassType(PassType passType) {
         this.passType = passType;
+    }
+
+    public String getTierName() {
+        return tierName != null ? tierName : (passType != null ? passType.name() : "Standard");
+    }
+
+    public void setTierName(String tierName) {
+        this.tierName = tierName;
     }
 
     public int getQuantity() {
@@ -121,11 +154,27 @@ public class AttendeeBookingDto {
         this.scannedAt = scannedAt;
     }
 
+    public String getScannedByName() {
+        return scannedByName;
+    }
+
+    public void setScannedByName(String scannedByName) {
+        this.scannedByName = scannedByName;
+    }
+
     public LocalDateTime getBookedAt() {
         return bookedAt;
     }
 
     public void setBookedAt(LocalDateTime bookedAt) {
         this.bookedAt = bookedAt;
+    }
+
+    public List<TicketDto> getTickets() {
+        return tickets;
+    }
+
+    public void setTickets(List<TicketDto> tickets) {
+        this.tickets = tickets;
     }
 }
