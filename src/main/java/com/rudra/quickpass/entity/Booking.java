@@ -25,6 +25,10 @@ public class Booking {
     @JoinColumn(name = "event_id", nullable = false)
     private Event event;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "ticket_tier_id")
+    private TicketTier tier;
+
     @Column(name = "total_quantity", nullable = false)
     private int totalQuantity = 1;
 
@@ -40,6 +44,10 @@ public class Booking {
     @OneToMany(mappedBy = "booking", cascade = CascadeType.ALL, orphanRemoval = true)
     @OrderBy("id ASC")
     private List<Ticket> tickets = new ArrayList<>();
+
+    @OneToMany(mappedBy = "booking", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OrderBy("id ASC")
+    private List<Payment> payments = new ArrayList<>();
 
     public Booking() {
     }
@@ -82,9 +90,13 @@ public class Booking {
 
     @Transient
     public String getPassType() {
-        return (tickets != null && !tickets.isEmpty() && tickets.get(0).getTicketTier() != null)
-                ? tickets.get(0).getTicketTier().getName()
-                : "Pass";
+        if (tickets != null && !tickets.isEmpty() && tickets.get(0).getTicketTier() != null) {
+            return tickets.get(0).getTicketTier().getName();
+        }
+        if (tier != null) {
+            return tier.getName();
+        }
+        return "Pass";
     }
 
     // Getters and Setters
@@ -166,5 +178,29 @@ public class Booking {
         }
         this.tickets.add(ticket);
         ticket.setBooking(this);
+    }
+
+    public TicketTier getTier() {
+        return tier;
+    }
+
+    public void setTier(TicketTier tier) {
+        this.tier = tier;
+    }
+
+    public List<Payment> getPayments() {
+        return payments;
+    }
+
+    public void setPayments(List<Payment> payments) {
+        this.payments = payments;
+    }
+
+    public void addPayment(Payment payment) {
+        if (this.payments == null) {
+            this.payments = new ArrayList<>();
+        }
+        this.payments.add(payment);
+        payment.setBooking(this);
     }
 }

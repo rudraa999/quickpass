@@ -9,6 +9,8 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap"
         rel="stylesheet">
+    <!-- Razorpay Standard Checkout -->
+    <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
     <style>
         body {
             font-family: 'Plus Jakarta Sans', sans-serif;
@@ -326,8 +328,14 @@
 
                 <!-- Submit Button -->
                 <button type="submit" id="confirmBookingBtn"
-                    class="w-full py-3.5 px-4 rounded-xl bg-indigo-600 hover:bg-indigo-700 active:scale-[0.99] text-white font-bold shadow-md shadow-indigo-100 transition duration-150">
-                    Confirm & Generate Pass
+                    class="w-full py-3.5 px-4 rounded-xl bg-indigo-600 hover:bg-indigo-700 active:scale-[0.99]
+                    text-white font-bold shadow-md shadow-indigo-100 transition duration-150 flex items-center
+                    justify-center space-x-2">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                    </svg>
+                    <span>Proceed to Pay with Razorpay</span>
                 </button>
             </form>
 
@@ -390,7 +398,12 @@
             document.getElementById('bookingReceipt').classList.add('hidden');
             document.getElementById('bookingAlert').classList.add('hidden');
             document.getElementById('confirmBookingBtn').disabled = false;
-            document.getElementById('confirmBookingBtn').textContent = 'Confirm & Generate Pass';
+            document.getElementById('confirmBookingBtn').innerHTML = `
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                </svg>
+                <span>Proceed to Pay with Razorpay</span>
+            `;
 
             updatePriceCalculation();
             document.getElementById('bookingModal').classList.remove('hidden');
@@ -420,7 +433,7 @@
             const alertBox = document.getElementById('bookingAlert');
 
             btn.disabled = true;
-            btn.textContent = 'Generating Pass & QR...';
+            btn.innerHTML = '<span>Initializing Razorpay Order...</span>';
             alertBox.classList.add('hidden');
 
             const passType = document.querySelector('input[name="passTypeRadio"]:checked').value;
@@ -428,34 +441,120 @@
             const eventId = parseInt(document.getElementById('modalEventId').value);
 
             try {
-                const res = await fetch('/api/events/book', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ eventId, passType, quantity })
-                });
+                    // Step 1: Create Razorpay Order on Backend
+                    const res = await fetch('/api/payments/create-order', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ eventId, passType, quantity })
+                    });
 
-                const data = await res.json();
+                    const orderData = await res.json();
 
-                if (res.ok) {
-                    document.getElementById('bookingForm').classList.add('hidden');
-                    document.getElementById('receiptQrCode').src = data.qrCodeBase64;
-                    document.getElementById('receiptTicketCode').textContent = data.ticketCode + ' (' + data.passType + ')';
-                    document.getElementById('bookingReceipt').classList.remove('hidden');
-                } else {
-                    alertBox.className = 'mb-4 p-3 rounded-xl text-sm font-medium bg-rose-50 border border-rose-200 text-rose-800';
-                    alertBox.textContent = data.error || data.message || 'Pass booking failed. Check remaining capacity.';
-                    alertBox.classList.remove('hidden');
-                    btn.disabled = false;
-                    btn.textContent = 'Confirm & Generate Pass';
+                if (!res.ok) {
+                    showBookingError(orderData.error || orderData.message || 'Could not initiate payment.');
+                    return;
                 }
+
+                // Check if running in real Razorpay mode or simulated test mode
+                const isSimulated = orderData.razorpayOrderId.startsWith('order_sim_') || !window.Razorpay;
+
+                if (!isSimulated) {
+                    // Step 2: Open Standard Razorpay Checkout Modal
+                    const options = {
+                        key: orderData.razorpayKeyId,
+                        amount: orderData.amountInPaise,
+                        currency: orderData.currency || "INR",
+                        name: "QuickPass",
+                        description: orderData.eventTitle + " (" + orderData.tierName + ")",
+                        order_id: orderData.razorpayOrderId,
+                        handler: async function (response) {
+                            btn.innerHTML = '<span>Verifying Payment & Generating Passes...</span>';
+                            await completeVerification({
+                                bookingId: orderData.bookingId,
+                                razorpayOrderId: response.razorpay_order_id,
+                                razorpayPaymentId: response.razorpay_payment_id,
+                                razorpaySignature: response.razorpay_signature
+                            });
+                        },
+                        modal: {
+                            ondismiss: async function () {
+                                btn.disabled = false;
+                                btn.innerHTML = `
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                                    </svg>
+                                    <span>Proceed to Pay with Razorpay</span>
+                                `;
+                                await fetch('/api/payments/cancel', {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({ razorpayOrderId: orderData.razorpayOrderId })
+                                });
+                            }
+                        },
+                        prefill: {
+                            name: orderData.attendeeName,
+                            email: orderData.attendeeEmail
+                        },
+                        theme: { color: "#4f46e5" }
+                    };
+                    const rzp = new Razorpay(options);
+                    rzp.on('payment.failed', function (resp) {
+                        showBookingError('Payment failed: ' + (resp.error.description || 'Declined'));
+                    });
+                    rzp.open();
+                } else {
+                    // Simulated Mode Fallback (when developer hasn't put real keys in launch.json yet)
+                    btn.innerHTML = '<span>Processing Test Payment...</span>';
+                    setTimeout(async () => {
+                        await completeVerification({
+                            bookingId: orderData.bookingId,
+                            razorpayOrderId: orderData.razorpayOrderId,
+                            razorpayPaymentId: 'pay_sim_' + Date.now(),
+                            razorpaySignature: 'sim_signature_' + Math.random().toString(36).substring(7)
+                        });
+                    }, 800);
+                }
+
             } catch (err) {
-                alertBox.className = 'mb-4 p-3 rounded-xl text-sm font-medium bg-rose-50 border border-rose-200 text-rose-800';
-                alertBox.textContent = 'Connection failed. Please try again.';
-                alertBox.classList.remove('hidden');
-                btn.disabled = false;
-                btn.textContent = 'Confirm & Generate Pass';
+                showBookingError('Connection failed: ' + err.message);
             }
         });
+
+        async function completeVerification(verifyPayload) {
+            const btn = document.getElementById('confirmBookingBtn');
+            try {
+                const verifyRes = await fetch('/api/payments/verify', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(verifyPayload)
+                });
+                const verifyData = await verifyRes.json();
+
+                if (verifyRes.ok) {
+                    window.location.href = '/my-bookings?booked=true';
+                } else {
+                    showBookingError(verifyData.message || 'Payment verification failed.');
+                }
+            } catch (err) {
+                showBookingError('Error completing verification: ' + err.message);
+            }
+        }
+
+        function showBookingError(msg) {
+            const alertBox = document.getElementById('bookingAlert');
+            const btn = document.getElementById('confirmBookingBtn');
+            alertBox.className = 'mb-4 p-3 rounded-xl text-sm font-medium bg-rose-50 border border-rose-200 text-rose-800';
+            alertBox.textContent = msg;
+            alertBox.classList.remove('hidden');
+            btn.disabled = false;
+            btn.innerHTML = `
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                </svg>
+                <span>Proceed to Pay with Razorpay</span>
+            `;
+        }
 
         async function logoutUser() {
             try {
