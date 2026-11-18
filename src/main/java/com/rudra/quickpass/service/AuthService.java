@@ -21,9 +21,9 @@ public class AuthService {
     private final JwtUtils jwtUtils;
 
     public AuthService(UserRepository userRepository,
-                       PasswordEncoder passwordEncoder,
-                       AuthenticationManager authenticationManager,
-                       JwtUtils jwtUtils) {
+            PasswordEncoder passwordEncoder,
+            AuthenticationManager authenticationManager,
+            JwtUtils jwtUtils) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.authenticationManager = authenticationManager;
@@ -31,7 +31,13 @@ public class AuthService {
     }
 
     public AuthResponse register(RegisterRequest request) {
-        if (userRepository.existsByEmail(request.getEmail())) {
+        User existing = userRepository.findByEmail(request.getEmail()).orElse(null);
+        if (existing != null) {
+            if (existing.getPassword() == null || existing.getPassword().isBlank()) {
+                throw new IllegalArgumentException(
+                    "An account with this email was created with Google Sign-In. Please click 'Continue with Google' to log in."
+                );
+            }
             throw new IllegalArgumentException("Email is already registered! Please log in.");
         }
 
@@ -56,12 +62,20 @@ public class AuthService {
     }
 
     public AuthResponse login(LoginRequest request) {
-        authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(request.getEmail(), request.getPassword())
-        );
+        User user = userRepository.findByEmail(request.getEmail()).orElse(null);
+        if (user != null && (user.getPassword() == null || user.getPassword().isBlank())) {
+            throw new IllegalArgumentException(
+                    "This account was registered using Google. Please log in by clicking 'Continue with Google'.");
+        }
 
-        User user = userRepository.findByEmail(request.getEmail())
-                .orElseThrow(() -> new IllegalArgumentException("User not found with email: " + request.getEmail()));
+        authenticationManager.authenticate(
+                new UsernamePasswordAuthenticationToken(request.getEmail(), request.getPassword()));
+
+        if (user == null) {
+            user = userRepository.findByEmail(request.getEmail())
+                    .orElseThrow(
+                            () -> new IllegalArgumentException("User not found with email: " + request.getEmail()));
+        }
 
         String token = jwtUtils.generateToken(user.getEmail(), user.getRole().name(), user.getFullName());
 
@@ -70,7 +84,6 @@ public class AuthService {
                 user.getEmail(),
                 user.getFullName(),
                 user.getRole().name(),
-                "Login successful!"
-        );
+                "Login successful!");
     }
 }

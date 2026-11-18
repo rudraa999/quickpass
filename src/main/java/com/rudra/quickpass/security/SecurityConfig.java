@@ -24,11 +24,17 @@ public class SecurityConfig {
 
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
     private final CustomUserDetailsService userDetailsService;
+    private final OAuth2AuthenticationSuccessHandler oAuth2AuthenticationSuccessHandler;
+    private final HttpCookieOAuth2AuthorizationRequestRepository cookieAuthorizationRequestRepository;
 
     public SecurityConfig(JwtAuthenticationFilter jwtAuthenticationFilter,
-            CustomUserDetailsService userDetailsService) {
+            CustomUserDetailsService userDetailsService,
+            OAuth2AuthenticationSuccessHandler oAuth2AuthenticationSuccessHandler,
+            HttpCookieOAuth2AuthorizationRequestRepository cookieAuthorizationRequestRepository) {
         this.jwtAuthenticationFilter = jwtAuthenticationFilter;
         this.userDetailsService = userDetailsService;
+        this.oAuth2AuthenticationSuccessHandler = oAuth2AuthenticationSuccessHandler;
+        this.cookieAuthorizationRequestRepository = cookieAuthorizationRequestRepository;
     }
 
     @Bean
@@ -61,6 +67,8 @@ public class SecurityConfig {
                                 "/logout",
                                 "/error",
                                 "/favicon.ico",
+                                "/oauth2/**",
+                                "/login/oauth2/**",
                                 "/api/auth/**",
                                 "/api/webhooks/**",
                                 "/css/**",
@@ -68,12 +76,21 @@ public class SecurityConfig {
                                 "/images/**")
                         .permitAll()
                         // Only users with ROLE_ADMIN can access admin endpoints
-                        .requestMatchers("/admin", "/admin/**", "/api/admin/**", "/api/events/*/approve", "/api/events/*/reject")
+                        .requestMatchers("/admin", "/admin/**", "/api/admin/**", "/api/events/*/approve",
+                                "/api/events/*/reject")
                         .hasAuthority("ROLE_ADMIN")
                         // Staff endpoints accessible by ROLE_STAFF, ROLE_ORGANIZER, and ROLE_ADMIN
                         .requestMatchers("/staff", "/staff/**", "/api/staff/**")
                         .hasAnyAuthority("ROLE_STAFF", "ROLE_ORGANIZER", "ROLE_ADMIN")
                         .anyRequest().authenticated())
+                .oauth2Login(oauth2 -> oauth2
+                        .loginPage("/login")
+                        .authorizationEndpoint(auth -> auth
+                                .baseUri("/oauth2/authorization")
+                                .authorizationRequestRepository(cookieAuthorizationRequestRepository))
+                        .redirectionEndpoint(redir -> redir
+                                .baseUri("/login/oauth2/code/*"))
+                        .successHandler(oAuth2AuthenticationSuccessHandler))
                 .logout(logout -> logout
                         .logoutUrl("/logout")
                         .logoutSuccessUrl("/login?logout")
@@ -90,8 +107,7 @@ public class SecurityConfig {
                                 String fullPath = q != null ? uri + "?" + q : uri;
                                 response.sendRedirect("/login?redirect=" + fullPath);
                             }
-                        })
-                )
+                        }))
                 .authenticationProvider(authenticationProvider())
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 
